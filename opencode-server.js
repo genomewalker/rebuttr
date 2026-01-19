@@ -1059,7 +1059,15 @@ Return ONLY a JSON array, no other text:
   }
 ]
 
-IMPORTANT: Do NOT use "Dr." prefix - just use the expert title directly (e.g., "Microbial Ecologist" not "Dr. Microbial Ecologist").`;
+IMPORTANT: Do NOT use "Dr." prefix - just use the expert title directly (e.g., "Microbial Ecologist" not "Dr. Microbial Ecologist").
+
+CRITICAL: Generate the JSON output IMMEDIATELY. Do NOT:
+- Ask clarifying questions
+- Request more information
+- Enter planning mode
+- Propose a plan before acting
+- Say "I'll analyze..." or "Let me review..."
+Just output the JSON array directly.`;
 
     try {
         const result = await runOpencode({
@@ -1124,6 +1132,8 @@ Note: The main manuscript and review files are attached directly. Use the data i
     ).join(',');
 
     const prompt = `TASK: Analyze reviewer comment and provide solutions. OUTPUT: JSON only (no other text before or after).
+
+CRITICAL: Generate JSON IMMEDIATELY. Do NOT ask questions, request clarification, or enter planning mode. Just analyze and output JSON.
 ${contextSection}${filesNote}${workerNote}
 EXPERTS: ${experts.map(e => `${e.name} (${e.expertise.slice(0,2).join(', ')})`).join('; ')}
 
@@ -2269,13 +2279,15 @@ async function createWorkerSession(paperId, file, outputDir, modelToUse, agentTo
 
     const initPrompt = `You are a data expert for this file: ${fileName}
 
+CRITICAL: Output IMMEDIATELY. Do NOT ask questions, request clarification, or enter planning mode.
+
 Your role:
 - You have this file loaded in your context
 - When asked questions, search the file and provide specific answers
 - Always cite exact values, table names, row counts from the data
 - Be concise but precise
 
-Confirm you have loaded the file by listing its main contents (tables, columns, row counts).`;
+List the main contents of this file (tables, columns, row counts) NOW.`;
 
     try {
         const result = await runOpencode({
@@ -3722,6 +3734,8 @@ function startApiServer(port = 3001) {
                 });
 
                 const summaryPrompt = `READ the attached review document and extract ALL individual ACTIONABLE comments as separate entries.
+
+CRITICAL: Output JSON IMMEDIATELY. Do NOT ask questions, request clarification, enter planning mode, or say "I'll analyze...". Just extract and output.
 
 CRITICAL RULES - WHAT TO EXTRACT:
 - Extract EVERY distinct ACTIONABLE point as a SEPARATE comment entry
@@ -5855,6 +5869,8 @@ except Exception as e:
 
                         const manuscriptPrompt = `You are analyzing an academic manuscript for a peer review response platform.
 
+CRITICAL: Output JSON IMMEDIATELY. Do NOT ask questions, request clarification, enter planning mode, or describe what you'll do. Just extract and output.
+
 ${manuscriptExt === '.docx' ? 'Use the docx skill to read the attached DOCX file with pandoc.' : ''}
 ${manuscriptExt === '.xlsx' ? 'Use the xlsx skill to read the attached Excel file.' : ''}
 
@@ -5926,6 +5942,8 @@ OUTPUT FORMAT - Return ONLY valid JSON (no markdown, no explanation):
                         });
 
                         const reviewPrompt = `You are parsing reviewer comments from an academic peer review document.
+
+CRITICAL: Output JSON IMMEDIATELY. Do NOT ask questions, request clarification, enter planning mode, or describe what you'll do. Just extract and output.
 
 ${reviewExt === '.docx' ? 'Use the docx skill to read the attached DOCX file with pandoc.' : ''}
 ${paperMetadata.title ? `Context: This review is for the paper "${paperMetadata.title}"` : ''}
@@ -6067,7 +6085,9 @@ OUTPUT FORMAT - Return ONLY valid JSON (no markdown, no explanation):
                             }))
                         );
 
-                        const groupPrompt = `Organize these ${parsedData.parse_info.total_comments} reviewer comments into thematic groups:
+                        const groupPrompt = `Organize these ${parsedData.parse_info.total_comments} reviewer comments into thematic groups.
+
+CRITICAL: Output JSON IMMEDIATELY. Do NOT ask questions, request clarification, or enter planning mode.
 
 === COMMENTS ===
 ${JSON.stringify(commentSummaries, null, 2)}
@@ -6075,7 +6095,7 @@ ${JSON.stringify(commentSummaries, null, 2)}
 
 Create thematic groups (clusters of related comments) and list final categories.
 
-Return ONLY valid JSON:
+Return ONLY valid JSON (no other text):
 {
   "thematic_groups": {
     "group_name": {

@@ -1,0 +1,4 @@
+threshold_bits,evalue_cutoff,n_hits_total,n_unique_queries_total,n_hits_conservative,n_unique_queries_conservative
+20,1e-5, , , , 
+35,1e-5, , , , 
+50,1e-5, , , , 

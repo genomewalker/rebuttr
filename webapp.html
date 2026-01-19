@@ -107,7 +107,7 @@
                             <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--ink-muted);"></i>
                         </div>
                         <div id="autosave-indicator" class="hidden" style="font-size: 12px; color: var(--ink-muted);"><i class="fas fa-check-circle text-success"></i> Saved</div>
-                        <button onclick="openPaperManager()" class="btn btn-secondary btn-sm"><i class="fas fa-folder-tree"></i> Papers</button>
+                        <a href="index.html" class="btn btn-secondary btn-sm"><i class="fas fa-folder-tree"></i> Papers</a>
                     </div>
                 </div>
             </header>
@@ -276,78 +276,6 @@
             <div class="modal-footer">
                 <button onclick="closeSettingsModal()" class="btn btn-secondary">Cancel</button>
                 <button onclick="saveSettings()" class="btn btn-primary">Save Settings</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Project Manager Modal (handles all paper operations) -->
-    <div id="project-manager-modal" class="modal-overlay hidden">
-        <div class="modal" style="max-width: 900px; max-height: 85vh;">
-            <div class="modal-header">
-                <h3 class="modal-title"><i class="fas fa-folder-tree"></i> Papers</h3>
-                <button id="project-manager-close" onclick="closeProjectManager()" class="btn-icon"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="modal-body" style="padding: 0;">
-                <!-- Stats -->
-                <div class="flex items-center gap-6" style="padding: 16px 20px; background: var(--paper-warm); border-bottom: 1px solid var(--rule);">
-                    <div style="text-align: center;"><div id="pm-total-papers" style="font-size: 20px; font-weight: 600;">0</div><div class="text-muted" style="font-size: 11px;">Papers</div></div>
-                    <div style="text-align: center;"><div id="pm-in-progress" style="font-size: 20px; font-weight: 600; color: var(--scholar);">0</div><div class="text-muted" style="font-size: 11px;">In Progress</div></div>
-                    <div style="text-align: center;"><div id="pm-completed" style="font-size: 20px; font-weight: 600; color: var(--sage);">0</div><div class="text-muted" style="font-size: 11px;">Completed</div></div>
-                    <div style="text-align: center;"><div id="pm-total-comments" style="font-size: 20px; font-weight: 600;">0</div><div class="text-muted" style="font-size: 11px;">Comments</div></div>
-                </div>
-                <!-- Tabs -->
-                <div class="flex items-center gap-2" style="padding: 12px 20px; background: var(--paper-warm);">
-                    <button id="tab-papers" onclick="showPapersTab()" class="btn btn-sm btn-secondary">Papers <span id="papers-count-badge" class="badge badge-inprogress" style="margin-left: 4px;">0</span></button>
-                    <button id="tab-trash" onclick="showTrashTab()" class="btn btn-sm" style="background: transparent; color: var(--ink-muted);"><i class="fas fa-trash"></i> Trash <span id="trash-count-badge" class="badge badge-pending hidden" style="margin-left: 4px;">0</span></button>
-                    <button id="add-paper-btn" onclick="showAddPaperForm()" class="btn btn-sm btn-primary" style="margin-left: auto;"><i class="fas fa-plus"></i> Add Paper</button>
-                </div>
-                <!-- Papers Grid -->
-                <div id="papers-grid" class="grid grid-cols-2 gap-3" style="padding: 20px; max-height: 400px; overflow-y: auto;"></div>
-                <!-- Empty State -->
-                <div id="papers-empty" class="hidden" style="padding: 48px; text-align: center;"><i class="fas fa-folder-open" style="font-size: 32px; color: var(--ink-muted); margin-bottom: 12px;"></i><p class="text-muted">No papers yet. Add one to get started.</p></div>
-                <!-- Trash Section -->
-                <div id="trash-section" class="hidden" style="padding: 20px;">
-                    <div id="trash-grid" class="grid grid-cols-2 gap-3"></div>
-                    <div id="trash-empty" class="hidden" style="padding: 48px; text-align: center;"><i class="fas fa-trash" style="font-size: 32px; color: var(--ink-muted); margin-bottom: 12px;"></i><p class="text-muted">Trash is empty</p></div>
-                </div>
-                <!-- Add Paper Form -->
-                <div id="add-paper-form" class="hidden" style="padding: 20px; border-top: 1px solid var(--rule);">
-                    <h4 style="font-weight: 500; margin-bottom: 16px;">Add New Paper</h4>
-                    <div class="grid grid-cols-3 gap-4 mb-4">
-                        <div class="card" style="padding: 16px; text-align: center; cursor: pointer; border: 2px dashed var(--rule);" id="dropzone-manuscript" ondragover="handleCategoryDragOver(event, 'manuscript')" ondragleave="handleCategoryDragLeave(event, 'manuscript')" ondrop="handleCategoryDrop(event, 'manuscript')">
-                            <i class="fas fa-file-lines" style="font-size: 24px; color: var(--ink-muted); margin-bottom: 8px;"></i>
-                            <div style="font-weight: 500; font-size: 13px;">Manuscript</div>
-                            <div id="dropzone-manuscript-empty" class="text-muted" style="font-size: 11px;">.docx or .pdf</div>
-                            <div id="files-manuscript"></div>
-                            <input type="file" id="file-input-manuscript" style="display: none;" accept=".docx,.pdf" onchange="handleCategoryFileSelect(event, 'manuscript')">
-                        </div>
-                        <div class="card" style="padding: 16px; text-align: center; cursor: pointer; border: 2px dashed var(--rule);" id="dropzone-review" ondragover="handleCategoryDragOver(event, 'review')" ondragleave="handleCategoryDragLeave(event, 'review')" ondrop="handleCategoryDrop(event, 'review')">
-                            <i class="fas fa-comments" style="font-size: 24px; color: var(--ink-muted); margin-bottom: 8px;"></i>
-                            <div style="font-weight: 500; font-size: 13px;">Reviews</div>
-                            <div id="dropzone-review-empty" class="text-muted" style="font-size: 11px;">Reviewer comments</div>
-                            <div id="files-review"></div>
-                            <input type="file" id="file-input-review" style="display: none;" accept=".docx,.pdf,.txt" multiple onchange="handleCategoryFileSelect(event, 'review')">
-                        </div>
-                        <div class="card" style="padding: 16px; text-align: center; cursor: pointer; border: 2px dashed var(--rule);" id="dropzone-supplementary" ondragover="handleCategoryDragOver(event, 'supplementary')" ondragleave="handleCategoryDragLeave(event, 'supplementary')" ondrop="handleCategoryDrop(event, 'supplementary')">
-                            <i class="fas fa-table" style="font-size: 24px; color: var(--ink-muted); margin-bottom: 8px;"></i>
-                            <div style="font-weight: 500; font-size: 13px;">Supplementary</div>
-                            <div id="dropzone-supplementary-empty" class="text-muted" style="font-size: 11px;">.xlsx, other files</div>
-                            <div id="files-supplementary"></div>
-                            <input type="file" id="file-input-supplementary" style="display: none;" multiple onchange="handleCategoryFileSelect(event, 'supplementary')">
-                        </div>
-                    </div>
-                    <div id="extraction-summary" class="hidden card mb-4" style="background: var(--scholar-light); border-color: var(--scholar);"></div>
-                    <div class="grid grid-cols-2 gap-4 mb-4">
-                        <div class="form-group"><label class="form-label">Title</label><input type="text" id="new-paper-title" class="form-input" placeholder="Paper title"></div>
-                        <div class="form-group"><label class="form-label">Authors</label><input type="text" id="new-paper-authors" class="form-input" placeholder="Author names"></div>
-                        <div class="form-group"><label class="form-label">Journal</label><input type="text" id="new-paper-journal" class="form-input" placeholder="Journal name"></div>
-                        <div class="form-group"><label class="form-label">Field</label><input type="text" id="new-paper-field" class="form-input" placeholder="Research field"></div>
-                    </div>
-                    <div class="flex gap-2" style="justify-content: flex-end;">
-                        <button onclick="hideAddPaperForm()" class="btn btn-secondary">Cancel</button>
-                        <button id="create-paper-btn" onclick="createNewPaperWithFiles()" class="btn btn-primary" disabled><i class="fas fa-plus"></i> Create Paper</button>
-                    </div>
-                </div>
             </div>
         </div>
     </div>

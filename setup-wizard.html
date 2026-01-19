@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ReviewFlow - Setup</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .drop-zone.dragover {
+            border-color: #3b82f6;
+            background: #eff6ff;
+        }
+        .file-item { animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .processing { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <div class="max-w-3xl mx-auto py-16 px-6">
+        <!-- Header -->
+        <div class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-gray-800 mb-3">
+                <i class="fas fa-paper-plane text-blue-500 mr-3"></i>
+                ReviewFlow
+            </h1>
+            <p class="text-lg text-gray-600">Drop your files and let AI do the rest</p>
+        </div>
+
+        <!-- Main Drop Zone -->
+        <div id="main-view">
+            <div id="drop-zone" class="drop-zone border-3 border-dashed border-gray-300 rounded-2xl p-12 text-center bg-white shadow-lg hover:border-blue-400 transition-all cursor-pointer">
+                <input type="file" id="file-input" class="hidden" multiple accept=".pdf,.doc,.docx,.txt,.rtf,.xlsx,.xls,.csv">
+                <label for="file-input" class="cursor-pointer block">
+                    <i class="fas fa-cloud-upload-alt text-6xl text-blue-400 mb-6"></i>
+                    <h2 class="text-2xl font-semibold text-gray-700 mb-3">Drop your files here</h2>
+                    <p class="text-gray-500 mb-6">Reviews, manuscript, supplementary materials, data tables</p>
+                    <div class="flex flex-wrap justify-center gap-2 text-sm text-gray-400">
+                        <span class="px-3 py-1 bg-gray-100 rounded-full">PDF</span>
+                        <span class="px-3 py-1 bg-gray-100 rounded-full">Word</span>
+                        <span class="px-3 py-1 bg-gray-100 rounded-full">Excel</span>
+                        <span class="px-3 py-1 bg-gray-100 rounded-full">Text</span>
+                    </div>
+                </label>
+            </div>
+
+            <!-- File List -->
+            <div id="file-list" class="hidden mt-8 bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-semibold text-gray-700 mb-4">
+                    <i class="fas fa-files text-blue-500 mr-2"></i>
+                    Uploaded Files
+                </h3>
+                <div id="files-container" class="space-y-3"></div>
+
+                <!-- Add more files -->
+                <div class="mt-4 pt-4 border-t border-gray-100">
+                    <label for="file-input" class="inline-flex items-center text-blue-500 hover:text-blue-600 cursor-pointer text-sm">
+                        <i class="fas fa-plus mr-2"></i> Add more files
+                    </label>
+                </div>
+            </div>
+
+            <!-- Process Button -->
+            <div id="process-section" class="hidden mt-8 text-center">
+                <button id="process-btn" onclick="processFiles()" class="px-8 py-4 bg-blue-500 text-white rounded-xl hover:bg-blue-600 font-semibold text-lg shadow-lg hover:shadow-xl transition-all">
+                    <i class="fas fa-magic mr-2"></i>
+                    Process with AI
+                </button>
+                <p class="text-sm text-gray-500 mt-3">OpenCode will extract reviewer comments and organize everything</p>
+            </div>
+        </div>
+
+        <!-- Processing View -->
+        <div id="processing-view" class="hidden">
+            <div class="bg-white rounded-2xl shadow-lg p-12 text-center">
+                <div class="processing">
+                    <i class="fas fa-cog fa-spin text-6xl text-blue-500 mb-6"></i>
+                </div>
+                <h2 class="text-2xl font-semibold text-gray-700 mb-3">Processing your files...</h2>
+                <p id="processing-status" class="text-gray-500">Uploading files to server</p>
+                <div class="mt-8 w-full bg-gray-200 rounded-full h-2">
+                    <div id="progress-bar" class="bg-blue-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Success View -->
+        <div id="success-view" class="hidden">
+            <div class="bg-white rounded-2xl shadow-lg p-12 text-center">
+                <i class="fas fa-check-circle text-6xl text-green-500 mb-6"></i>
+                <h2 class="text-2xl font-semibold text-gray-700 mb-3">Setup Complete!</h2>
+                <p id="success-message" class="text-gray-500 mb-8">Your paper is ready for review</p>
+                <a id="launch-btn" href="index.html" class="inline-block px-8 py-4 bg-green-500 text-white rounded-xl hover:bg-green-600 font-semibold text-lg shadow-lg hover:shadow-xl transition-all">
+                    <i class="fas fa-rocket mr-2"></i>
+                    Launch ReviewFlow
+                </a>
+            </div>
+        </div>
+
+        <!-- Error View -->
+        <div id="error-view" class="hidden">
+            <div class="bg-white rounded-2xl shadow-lg p-12 text-center">
+                <i class="fas fa-exclamation-circle text-6xl text-red-500 mb-6"></i>
+                <h2 class="text-2xl font-semibold text-gray-700 mb-3">Something went wrong</h2>
+                <p id="error-message" class="text-gray-500 mb-8"></p>
+                <button onclick="location.reload()" class="px-8 py-4 bg-gray-500 text-white rounded-xl hover:bg-gray-600 font-semibold text-lg">
+                    <i class="fas fa-redo mr-2"></i>
+                    Try Again
+                </button>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center mt-12 text-gray-400 text-sm">
+            <p>Powered by OpenCode + Claude</p>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3001';
+        let uploadedFiles = [];
+
+        // Drag and drop handlers
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(event => {
+            dropZone.addEventListener(event, e => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+        });
+
+        ['dragenter', 'dragover'].forEach(event => {
+            dropZone.addEventListener(event, () => dropZone.classList.add('dragover'));
+        });
+
+        ['dragleave', 'drop'].forEach(event => {
+            dropZone.addEventListener(event, () => dropZone.classList.remove('dragover'));
+        });
+
+        dropZone.addEventListener('drop', e => {
+            const files = Array.from(e.dataTransfer.files);
+            handleFiles(files);
+        });
+
+        fileInput.addEventListener('change', e => {
+            const files = Array.from(e.target.files);
+            handleFiles(files);
+        });
+
+        function handleFiles(files) {
+            files.forEach(file => {
+                if (!uploadedFiles.find(f => f.name === file.name)) {
+                    uploadedFiles.push(file);
+                }
+            });
+            renderFileList();
+        }
+
+        function renderFileList() {
+            const container = document.getElementById('files-container');
+            const fileList = document.getElementById('file-list');
+            const processSection = document.getElementById('process-section');
+
+            if (uploadedFiles.length === 0) {
+                fileList.classList.add('hidden');
+                processSection.classList.add('hidden');
+                return;
+            }
+
+            fileList.classList.remove('hidden');
+            processSection.classList.remove('hidden');
+
+            container.innerHTML = uploadedFiles.map((file, index) => `
+                <div class="file-item flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div class="flex items-center gap-3">
+                        <i class="fas ${getFileIcon(file.name)} text-xl ${getFileColor(file.name)}"></i>
+                        <div>
+                            <p class="font-medium text-gray-700">${file.name}</p>
+                            <p class="text-xs text-gray-400">${formatFileSize(file.size)}</p>
+                        </div>
+                    </div>
+                    <button onclick="removeFile(${index})" class="text-gray-400 hover:text-red-500 p-2">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function removeFile(index) {
+            uploadedFiles.splice(index, 1);
+            renderFileList();
+        }
+
+        function getFileIcon(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            const icons = {
+                pdf: 'fa-file-pdf',
+                doc: 'fa-file-word',
+                docx: 'fa-file-word',
+                xls: 'fa-file-excel',
+                xlsx: 'fa-file-excel',
+                csv: 'fa-file-csv',
+                txt: 'fa-file-alt',
+                rtf: 'fa-file-alt'
+            };
+            return icons[ext] || 'fa-file';
+        }
+
+        function getFileColor(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            const colors = {
+                pdf: 'text-red-500',
+                doc: 'text-blue-500',
+                docx: 'text-blue-500',
+                xls: 'text-green-500',
+                xlsx: 'text-green-500',
+                csv: 'text-green-500'
+            };
+            return colors[ext] || 'text-gray-500';
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        async function processFiles() {
+            if (uploadedFiles.length === 0) return;
+
+            // Show processing view
+            document.getElementById('main-view').classList.add('hidden');
+            document.getElementById('processing-view').classList.remove('hidden');
+
+            const progressBar = document.getElementById('progress-bar');
+            const statusEl = document.getElementById('processing-status');
+
+            try {
+                // Step 1: Upload files
+                statusEl.textContent = 'Uploading files...';
+                progressBar.style.width = '20%';
+
+                const formData = new FormData();
+                uploadedFiles.forEach(file => formData.append('files', file));
+
+                const uploadRes = await fetch(`${API_BASE}/api/setup/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!uploadRes.ok) throw new Error('Failed to upload files');
+                const uploadData = await uploadRes.json();
+
+                // Step 2: Parse with AI
+                statusEl.textContent = 'AI is analyzing your documents...';
+                progressBar.style.width = '50%';
+
+                const parseRes = await fetch(`${API_BASE}/api/setup/parse`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: uploadData.session_id })
+                });
+
+                if (!parseRes.ok) throw new Error('Failed to parse documents');
+                const parseData = await parseRes.json();
+
+                // Step 3: Create paper
+                statusEl.textContent = 'Setting up your paper...';
+                progressBar.style.width = '80%';
+
+                const createRes = await fetch(`${API_BASE}/api/setup/create`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: uploadData.session_id })
+                });
+
+                if (!createRes.ok) throw new Error('Failed to create paper');
+                const createData = await createRes.json();
+
+                // Success!
+                progressBar.style.width = '100%';
+                statusEl.textContent = 'Done!';
+
+                setTimeout(() => {
+                    document.getElementById('processing-view').classList.add('hidden');
+                    document.getElementById('success-view').classList.remove('hidden');
+                    document.getElementById('success-message').textContent =
+                        `Found ${createData.comment_count || 0} reviewer comments across ${createData.reviewer_count || 0} reviewers`;
+                    document.getElementById('launch-btn').href = `index.html?paper=${createData.paper_id}`;
+                }, 500);
+
+            } catch (error) {
+                console.error('Setup error:', error);
+                document.getElementById('processing-view').classList.add('hidden');
+                document.getElementById('error-view').classList.remove('hidden');
+                document.getElementById('error-message').textContent = error.message;
+            }
+        }
+    </script>
+</body>
+</html>

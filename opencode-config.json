@@ -1,0 +1,91 @@
+{
+  "model": "github-copilot/gpt-5-mini",
+  "agent": "general",
+  "variant": "high",
+  "available_models": [
+    {
+      "id": "openai/gpt-5.2-codex",
+      "name": "GPT-5.2 Codex",
+      "description": "Best for code"
+    },
+    {
+      "id": "openai/gpt-5.2",
+      "name": "GPT-5.2",
+      "description": "Latest GPT model"
+    },
+    {
+      "id": "github-copilot/gpt-5.2",
+      "name": "GitHub Copilot GPT-5.2",
+      "description": "Copilot model"
+    },
+    {
+      "id": "opencode/glm-4.7-free",
+      "name": "GLM 4.7 (Free)",
+      "description": "Free GLM model"
+    },
+    {
+      "id": "opencode/gpt-5-nano",
+      "name": "GPT-5 Nano (Free)",
+      "description": "Free tier"
+    },
+    {
+      "id": "opencode/minimax-m2.1-free",
+      "name": "MiniMax M2.1 (Free)",
+      "description": "Free MiniMax"
+    }
+  ],
+  "available_agents": [
+    {
+      "id": "plan",
+      "name": "Plan",
+      "description": "Planning mode"
+    },
+    {
+      "id": "build",
+      "name": "Build",
+      "description": "Implementation mode"
+    },
+    {
+      "id": "explore",
+      "name": "Explore",
+      "description": "Research/exploration"
+    },
+    {
+      "id": "general",
+      "name": "General",
+      "description": "General purpose"
+    }
+  ],
+  "available_variants": [
+    {
+      "id": "minimal",
+      "name": "Minimal",
+      "description": "Fastest"
+    },
+    {
+      "id": "low",
+      "name": "Low",
+      "description": "Fast"
+    },
+    {
+      "id": "medium",
+      "name": "Medium",
+      "description": "Balanced"
+    },
+    {
+      "id": "high",
+      "name": "High",
+      "description": "More reasoning"
+    },
+    {
+      "id": "xhigh",
+      "name": "Extra High",
+      "description": "Complex tasks"
+    },
+    {
+      "id": "max",
+      "name": "Maximum",
+      "description": "Most reasoning"
+    }
+  ]
+}

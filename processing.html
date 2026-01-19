@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Processing - ReviewFlow</title>
+    <link rel="stylesheet" href="css/app.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Processing page specific styles - Academic Editorial Design */
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .main {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--sp-12) var(--sp-6);
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .container.wide {
+            max-width: 900px;
+        }
+
+        .status-card {
+            background: var(--paper);
+            border: 1px solid var(--rule);
+            border-radius: 12px;
+            padding: var(--sp-12);
+            text-align: center;
+            box-shadow: var(--shadow-elevated);
+        }
+
+        .status-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto var(--sp-6);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+        }
+
+        .status-icon.processing {
+            background: var(--scholar-light);
+            color: var(--scholar);
+            border: 1px solid var(--scholar);
+        }
+
+        .status-icon.success {
+            background: var(--sage-bg);
+            color: var(--sage);
+            border: 1px solid var(--sage-border);
+        }
+
+        .status-icon.error {
+            background: var(--rust-bg);
+            color: var(--rust);
+            border: 1px solid var(--rust-border);
+        }
+
+        .status-icon.review {
+            background: var(--amber-bg);
+            color: var(--amber);
+            border: 1px solid var(--amber-border);
+        }
+
+        .status-title {
+            font-family: 'Source Serif 4', Georgia, serif;
+            font-size: var(--text-2xl);
+            font-weight: 600;
+            margin-bottom: var(--sp-2);
+            color: var(--ink);
+        }
+
+        .status-subtitle {
+            color: var(--ink-muted);
+            margin-bottom: var(--sp-8);
+        }
+
+        /* Progress steps */
+        .steps {
+            text-align: left;
+            margin-bottom: var(--sp-8);
+        }
+
+        .step {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 14px 0;
+            border-bottom: 1px solid var(--rule-light);
+        }
+
+        .step:last-child {
+            border-bottom: none;
+        }
+
+        .step-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+
+        .step-icon.pending {
+            background: var(--paper-dark);
+            color: var(--ink-light);
+            border: 1px solid var(--rule);
+        }
+
+        .step-icon.active {
+            background: var(--scholar);
+            color: white;
+            box-shadow: 0 0 0 4px rgba(30, 58, 95, 0.15);
+        }
+
+        .step-icon.done {
+            background: var(--sage);
+            color: white;
+        }
+
+        .step-icon.error {
+            background: var(--rust);
+            color: white;
+        }
+
+        .step-icon.review {
+            background: var(--amber);
+            color: white;
+            box-shadow: 0 0 0 4px rgba(217, 119, 6, 0.15);
+        }
+
+        .step-content {
+            flex: 1;
+        }
+
+        .step-title {
+            font-weight: 500;
+            font-size: var(--text-base);
+            color: var(--ink);
+        }
+
+        .step-title.muted {
+            color: var(--ink-light);
+        }
+
+        .step-detail {
+            font-size: var(--text-sm);
+            color: var(--ink-muted);
+            margin-top: 2px;
+        }
+
+        /* Spinner animation */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .fa-spinner {
+            animation: spin 1s linear infinite;
+        }
+
+        /* Buttons */
+        .actions {
+            display: flex;
+            gap: var(--sp-4);
+            justify-content: center;
+        }
+
+        /* Log output */
+        .log-container {
+            margin-top: var(--sp-6);
+            text-align: left;
+        }
+
+        .log-toggle {
+            font-size: var(--text-sm);
+            color: var(--ink-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 0;
+            transition: color var(--transition-fast);
+        }
+
+        .log-toggle:hover {
+            color: var(--ink);
+        }
+
+        /* Terminal-style log output */
+        .log-output {
+            display: none;
+            margin-top: 12px;
+            background: var(--terminal-bg);
+            border-radius: var(--radius-md);
+            padding: 12px 16px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: var(--font-mono);
+            font-size: var(--text-xs);
+            color: var(--terminal-muted);
+            border: 1px solid var(--terminal-border);
+        }
+
+        .log-output.show {
+            display: block;
+        }
+
+        .log-line {
+            margin: 2px 0;
+            line-height: 1.5;
+            padding: 1px 0;
+            word-break: break-word;
+            white-space: pre-wrap;
+        }
+
+        /* Terminal-style log levels matching server format */
+        .log-line .log-time {
+            color: var(--terminal-muted);
+        }
+
+        .log-line .log-level {
+            font-weight: 600;
+            margin: 0 4px;
+        }
+
+        .log-line .log-level.info { color: var(--cyan); }
+        .log-line .log-level.warn { color: var(--amber); }
+        .log-line .log-level.error { color: var(--rust); }
+        .log-line .log-level.success { color: var(--emerald); }
+
+        /* AI output types */
+        .log-line .log-level.thinking { color: var(--purple); }
+        .log-line .log-level.tool { color: var(--amber); }
+        .log-line .log-level.result { color: var(--terminal-muted); }
+        .log-line .log-level.output { color: var(--cyan-light); }
+        .log-line .log-level.ai { color: var(--emerald); }
+
+        .log-line .log-message {
+            color: var(--terminal-text);
+        }
+
+        .log-line .log-message.muted {
+            color: var(--terminal-muted);
+        }
+
+        /* Special formatting for file paths */
+        .log-line .log-file {
+            color: var(--cyan-light);
+        }
+
+        /* Highlight important items */
+        .log-line.highlight {
+            background: rgba(8, 145, 178, 0.1);
+            border-left: 2px solid #58a6ff;
+            padding-left: 8px;
+            margin-left: -8px;
+        }
+
+        /* Expert Review Panel Styles */
+        .expert-review-panel {
+            text-align: left;
+            margin-top: var(--sp-6);
+        }
+
+        .expert-review-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--sp-4);
+        }
+
+        .expert-review-title {
+            font-family: 'Source Serif 4', Georgia, serif;
+            font-size: var(--text-lg);
+            font-weight: 600;
+            color: var(--ink);
+        }
+
+        .expert-cards {
+            display: grid;
+            gap: var(--sp-4);
+        }
+
+        .expert-card {
+            background: var(--paper-warm);
+            border: 1px solid var(--rule);
+            border-radius: 8px;
+            padding: var(--sp-4);
+            display: flex;
+            gap: var(--sp-4);
+            align-items: flex-start;
+        }
+
+        .expert-card.custom {
+            border-style: dashed;
+            border-color: var(--scholar);
+        }
+
+        .expert-icon-wrapper {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .expert-icon-wrapper.blue { background: var(--scholar-light); color: var(--scholar); }
+        .expert-icon-wrapper.green { background: var(--sage-bg); color: var(--sage); }
+        .expert-icon-wrapper.purple { background: #f3e8ff; color: #7c3aed; }
+        .expert-icon-wrapper.amber { background: var(--amber-bg); color: var(--amber); }
+        .expert-icon-wrapper.red { background: var(--rust-bg); color: var(--rust); }
+        .expert-icon-wrapper.teal { background: #ccfbf1; color: #0d9488; }
+        .expert-icon-wrapper.indigo { background: #e0e7ff; color: #4f46e5; }
+        .expert-icon-wrapper.emerald { background: #d1fae5; color: #059669; }
+
+        .expert-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .expert-name {
+            font-weight: 600;
+            color: var(--ink);
+            margin-bottom: 4px;
+        }
+
+        .expert-expertise {
+            font-size: var(--text-sm);
+            color: var(--ink-muted);
+            margin-bottom: 8px;
+        }
+
+        .expert-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .expert-tag {
+            font-size: var(--text-xs);
+            padding: 2px 8px;
+            background: var(--paper);
+            border: 1px solid var(--rule);
+            border-radius: 12px;
+            color: var(--ink-light);
+        }
+
+        .expert-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .expert-action-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            border: 1px solid var(--rule);
+            background: var(--paper);
+            color: var(--ink-light);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--transition-fast);
+        }
+
+        .expert-action-btn:hover {
+            border-color: var(--ink-light);
+            color: var(--ink);
+        }
+
+        .expert-action-btn.delete:hover {
+            border-color: var(--rust);
+            color: var(--rust);
+            background: var(--rust-bg);
+        }
+
+        .add-expert-btn {
+            width: 100%;
+            padding: var(--sp-3);
+            border: 2px dashed var(--rule);
+            border-radius: 8px;
+            background: transparent;
+            color: var(--ink-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: var(--text-sm);
+            transition: all var(--transition-fast);
+        }
+
+        .add-expert-btn:hover {
+            border-color: var(--scholar);
+            color: var(--scholar);
+            background: var(--scholar-light);
+        }
+
+        .expert-confirm-actions {
+            margin-top: var(--sp-6);
+            display: flex;
+            gap: var(--sp-4);
+            justify-content: center;
+        }
+
+        /* Expert Edit Modal */
+        .expert-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .expert-modal {
+            background: var(--paper);
+            border-radius: 12px;
+            padding: var(--sp-6);
+            width: 90%;
+            max-width: 500px;
+            box-shadow: var(--shadow-elevated);
+        }
+
+        .expert-modal-title {
+            font-family: 'Source Serif 4', Georgia, serif;
+            font-size: var(--text-xl);
+            font-weight: 600;
+            margin-bottom: var(--sp-4);
+        }
+
+        .expert-form-group {
+            margin-bottom: var(--sp-4);
+        }
+
+        .expert-form-label {
+            display: block;
+            font-size: var(--text-sm);
+            font-weight: 500;
+            color: var(--ink);
+            margin-bottom: 4px;
+        }
+
+        .expert-form-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--rule);
+            border-radius: 6px;
+            font-size: var(--text-base);
+            background: var(--paper);
+            color: var(--ink);
+        }
+
+        .expert-form-input:focus {
+            outline: none;
+            border-color: var(--scholar);
+            box-shadow: 0 0 0 3px var(--scholar-light);
+        }
+
+        .expert-form-textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        .icon-color-picker {
+            display: flex;
+            gap: var(--sp-4);
+        }
+
+        .icon-picker, .color-picker {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .icon-option, .color-option {
+            width: 36px;
+            height: 36px;
+            border-radius: 6px;
+            border: 2px solid transparent;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--transition-fast);
+        }
+
+        .icon-option {
+            background: var(--paper-warm);
+            color: var(--ink-light);
+        }
+
+        .icon-option:hover, .icon-option.selected {
+            border-color: var(--scholar);
+            color: var(--scholar);
+        }
+
+        .color-option.blue { background: var(--scholar); }
+        .color-option.green { background: var(--sage); }
+        .color-option.purple { background: #7c3aed; }
+        .color-option.amber { background: var(--amber); }
+        .color-option.red { background: var(--rust); }
+        .color-option.teal { background: #0d9488; }
+        .color-option.indigo { background: #4f46e5; }
+        .color-option.emerald { background: #059669; }
+
+        .color-option:hover, .color-option.selected {
+            transform: scale(1.15);
+            box-shadow: 0 0 0 3px rgba(0,0,0,0.1);
+        }
+
+        .expert-modal-actions {
+            display: flex;
+            gap: var(--sp-3);
+            justify-content: flex-end;
+            margin-top: var(--sp-6);
+        }
+
+        /* Header navigation - styles now in app.css */
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <a href="index.html" class="logo" style="text-decoration: none;">
+                <div class="logo-icon">
+                    <i class="fas fa-pen-nib"></i>
+                </div>
+                <span class="logo-text">ReviewFlow</span>
+            </a>
+            <div class="header-nav">
+                <a href="index.html" class="header-link">
+                    <i class="fas fa-folder-open"></i>
+                    Projects
+                </a>
+                <button class="header-btn danger" id="stop-btn" onclick="stopProcessing()" style="display: none;">
+                    <i class="fas fa-stop-circle"></i>
+                    Stop Processing
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="container">
+            <div class="status-card">
+                <div class="status-icon processing" id="status-icon">
+                    <i class="fas fa-spinner fa-spin" id="status-icon-inner"></i>
+                </div>
+                <h2 class="status-title" id="status-title">Processing paper</h2>
+                <p class="status-subtitle" id="status-subtitle">Extracting reviewer comments...</p>
+
+                <div class="steps" id="steps">
+                    <div class="step" id="step-upload">
+                        <div class="step-icon done" id="step-upload-icon">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <div class="step-content">
+                            <div class="step-title">Files uploaded</div>
+                            <div class="step-detail" id="step-upload-detail">-</div>
+                        </div>
+                    </div>
+
+                    <div class="step" id="step-parse">
+                        <div class="step-icon active" id="step-parse-icon">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </div>
+                        <div class="step-content">
+                            <div class="step-title" id="step-parse-title">Load context</div>
+                            <div class="step-detail" id="step-parse-detail">Reading manuscript for context...</div>
+                        </div>
+                    </div>
+
+                    <div class="step" id="step-extract">
+                        <div class="step-icon pending" id="step-extract-icon">
+                            <i class="fas fa-circle"></i>
+                        </div>
+                        <div class="step-content">
+                            <div class="step-title muted" id="step-extract-title">Extract comments</div>
+                            <div class="step-detail" id="step-extract-detail">Processing reviews one at a time...</div>
+                        </div>
+                    </div>
+
+                    <div class="step" id="step-classify">
+                        <div class="step-icon pending" id="step-classify-icon">
+                            <i class="fas fa-circle"></i>
+                        </div>
+                        <div class="step-content">
+                            <div class="step-title muted" id="step-classify-title">Organize & group</div>
+                            <div class="step-detail" id="step-classify-detail">Creating thematic clusters...</div>
+                        </div>
+                    </div>
+
+                    <div class="step" id="step-experts">
+                        <div class="step-icon pending" id="step-experts-icon">
+                            <i class="fas fa-circle"></i>
+                        </div>
+                        <div class="step-content">
+                            <div class="step-title muted" id="step-experts-title">Review expert panel</div>
+                            <div class="step-detail" id="step-experts-detail">Review and customize AI experts...</div>
+                        </div>
+                    </div>
+
+                    <div class="step" id="step-analysis">
+                        <div class="step-icon pending" id="step-analysis-icon">
+                            <i class="fas fa-circle"></i>
+                        </div>
+                        <div class="step-content">
+                            <div class="step-title muted" id="step-analysis-title">Generate analysis</div>
+                            <div class="step-detail" id="step-analysis-detail">Expert insights for each comment...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Expert Review Panel (shown when awaiting review) -->
+                <div class="expert-review-panel" id="expert-review-panel" style="display: none;">
+                    <div class="expert-review-header">
+                        <div class="expert-review-title">Suggested Expert Panel</div>
+                    </div>
+                    <p style="font-size: var(--text-sm); color: var(--ink-muted); margin-bottom: var(--sp-4);">
+                        Based on your paper's content, we suggest these experts to analyze the reviewer comments.
+                        You can edit, remove, or add new experts before continuing.
+                    </p>
+                    <div class="expert-cards" id="expert-cards">
+                        <!-- Expert cards will be rendered here -->
+                    </div>
+                    <button class="add-expert-btn" onclick="showAddExpertModal()">
+                        <i class="fas fa-plus"></i>
+                        Add Custom Expert
+                    </button>
+                    <div class="expert-confirm-actions">
+                        <button class="btn btn-secondary" onclick="skipExperts()">
+                            <i class="fas fa-forward"></i>
+                            Skip Experts
+                        </button>
+                        <button class="btn btn-primary" onclick="confirmExperts()">
+                            <i class="fas fa-check"></i>
+                            Confirm & Continue
+                        </button>
+                    </div>
+                </div>
+
+                <div class="actions" id="actions" style="display: none;">
+                    <a href="index.html" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i>
+                        Back
+                    </a>
+                    <a href="#" class="btn btn-primary" id="open-btn">
+                        <i class="fas fa-arrow-right"></i>
+                        Open paper
+                    </a>
+                </div>
+
+                <div class="log-container">
+                    <div class="log-toggle" onclick="toggleLog()">
+                        <i class="fas fa-terminal"></i>
+                        <span id="log-toggle-text">Show log</span>
+                    </div>
+                    <div class="log-output" id="log-output"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const API_BASE = 'http://localhost:3001';
+        let paperId = null;
+        let pollInterval = null;
+        let suggestedExperts = [];
+        let editingExpertId = null;
+
+        // Icon mapping for FontAwesome
+        const iconMap = {
+            'dna': 'fa-dna',
+            'microscope': 'fa-microscope',
+            'chart-line': 'fa-chart-line',
+            'flask': 'fa-flask',
+            'bacteria': 'fa-bacterium',
+            'leaf': 'fa-leaf',
+            'globe': 'fa-globe',
+            'database': 'fa-database',
+            'code': 'fa-code',
+            'chart-bar': 'fa-chart-bar',
+            'user': 'fa-user-graduate',
+            'book': 'fa-book',
+            'brain': 'fa-brain',
+            'calculator': 'fa-calculator'
+        };
+
+        // Get paper ID from URL
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            paperId = urlParams.get('paper');
+
+            if (!paperId) {
+                showError('No paper ID provided');
+                return;
+            }
+
+            document.getElementById('open-btn').href = `webapp.html?paper=${paperId}`;
+
+            // Start processing
+            startProcessing();
+        });
+
+        async function startProcessing() {
+            addLog('Starting processing for paper: ' + paperId, 'info');
+
+            // Show stop button
+            document.getElementById('stop-btn').style.display = 'flex';
+
+            try {
+                // First poll status to show file counts
+                await pollStatus();
+
+                // Get session config for this paper
+                let sessionConfig = {};
+                try {
+                    const sessionRes = await fetch(`${API_BASE}/session/${paperId}`);
+                    if (sessionRes.ok) {
+                        sessionConfig = await sessionRes.json();
+                        addLog(`AI config: ${sessionConfig.model || 'default'}`, 'info');
+                    }
+                } catch (e) {
+                    addLog('Using default AI config', 'info');
+                }
+
+                // Trigger the NEW background processing endpoint (supports two-stage expert workflow)
+                // Uses /start-processing which processes already-uploaded files
+                const response = await fetch(`${API_BASE}/papers/${paperId}/start-processing`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: sessionConfig.model,
+                        agent: sessionConfig.agent,
+                        variant: sessionConfig.variant
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                addLog('Processing started', 'success');
+                addLog(`Job ID: ${data.job_id}`, 'info');
+
+                // Start polling for status
+                pollStatus();
+                pollInterval = setInterval(pollStatus, 2000);
+
+            } catch (error) {
+                showError('Failed to start processing: ' + error.message);
+                document.getElementById('stop-btn').style.display = 'none';
+            }
+        }
+
+        async function stopProcessing() {
+            if (!confirm('Stop processing this paper? You can restart it later.')) return;
+
+            addLog('Stopping processing...', 'warn');
+
+            try {
+                // Stop the processing job
+                await fetch(`${API_BASE}/papers/${paperId}/stop-processing`, {
+                    method: 'POST'
+                });
+
+                // Stop polling
+                if (pollInterval) clearInterval(pollInterval);
+
+                addLog('Processing stopped', 'warn');
+
+                // Hide stop button
+                document.getElementById('stop-btn').style.display = 'none';
+
+                // Update UI
+                document.getElementById('status-icon').className = 'status-icon';
+                document.getElementById('status-icon').style.background = 'var(--paper-dark)';
+                document.getElementById('status-icon').style.color = 'var(--ink-light)';
+                document.getElementById('status-icon').style.border = '1px solid var(--rule)';
+                document.getElementById('status-icon-inner').className = 'fas fa-pause';
+                document.getElementById('status-title').textContent = 'Processing Stopped';
+                document.getElementById('status-subtitle').textContent = 'You can restart processing from the project page';
+
+                // Show actions
+                document.getElementById('actions').style.display = 'flex';
+                document.getElementById('open-btn').style.display = 'none';
+
+            } catch (e) {
+                addLog('Error stopping: ' + e.message, 'error');
+            }
+        }
+
+        let lastLogCount = 0;
+
+        async function pollStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/papers/${paperId}/status`);
+                const data = await response.json();
+
+                updateSteps(data);
+
+                // Display new logs from job
+                if (data.logs && Array.isArray(data.logs)) {
+                    const newLogs = data.logs.slice(lastLogCount);
+                    for (const log of newLogs) {
+                        addLog(log.message || log, 'info');
+                    }
+                    lastLogCount = data.logs.length;
+                }
+
+                // Update progress if available
+                if (data.progress) {
+                    document.getElementById('step-parse-detail').textContent =
+                        data.current_file ? `Processing: ${data.current_file}` : `${data.progress}% complete`;
+                }
+
+                if (data.status === 'parsed' || data.status === 'active' || data.status === 'complete' || data.status === 'completed') {
+                    clearInterval(pollInterval);
+                    showSuccess(data);
+                } else if (data.status === 'awaiting_expert_review') {
+                    // Pause polling and show expert review UI
+                    clearInterval(pollInterval);
+                    showExpertReview(data);
+                } else if (data.status === 'processing_experts') {
+                    // Continue polling during expert analysis
+                    setStepDone('parse');
+                    setStepDone('extract');
+                    setStepDone('classify');
+                    setStepDone('experts');
+                    setStepActive('analysis');
+                    document.getElementById('status-title').textContent = 'Generating Analysis';
+                    document.getElementById('status-subtitle').textContent = 'Experts are analyzing comments...';
+                    document.getElementById('expert-review-panel').style.display = 'none';
+                } else if (data.status === 'error' || data.status === 'failed') {
+                    clearInterval(pollInterval);
+                    showError(data.error_message || data.error || 'Processing failed');
+                } else if (data.status === 'uploaded') {
+                    // Just uploaded, need to trigger parsing
+                    document.getElementById('step-parse-detail').textContent = 'Starting...';
+                }
+
+            } catch (error) {
+                addLog('Status check failed: ' + error.message, 'error');
+            }
+        }
+
+        function updateSteps(data) {
+            // Update upload step
+            const manuscriptCount = data.files?.manuscript?.length || 0;
+            const reviewCount = data.files?.reviews?.length || 0;
+            const suppCount = data.files?.supplementary?.length || 0;
+            const fileCount = manuscriptCount + reviewCount + suppCount;
+
+            let fileDetail = [];
+            if (manuscriptCount > 0) fileDetail.push(`${manuscriptCount} manuscript`);
+            if (reviewCount > 0) fileDetail.push(`${reviewCount} review${reviewCount !== 1 ? 's' : ''}`);
+            if (suppCount > 0) fileDetail.push(`${suppCount} supplementary`);
+
+            document.getElementById('step-upload-detail').textContent =
+                fileDetail.length > 0 ? fileDetail.join(', ') : `${fileCount} file${fileCount !== 1 ? 's' : ''} received`;
+
+            // Update based on status
+            if (data.status === 'parsing' || data.status === 'processing') {
+                setStepActive('parse');
+                document.getElementById('step-parse-detail').textContent = 'Loading manuscript context...';
+            }
+
+            if (data.status === 'extracting') {
+                setStepDone('parse');
+                setStepActive('extract');
+                document.getElementById('step-extract-detail').textContent = 'Processing reviews sequentially...';
+            }
+
+            if (data.status === 'classifying' || data.current_step === 'summarizing') {
+                setStepDone('parse');
+                setStepDone('extract');
+                setStepActive('classify');
+                document.getElementById('step-classify-detail').textContent = 'Creating thematic groups...';
+            }
+
+            if (data.current_step === 'suggesting_experts') {
+                setStepDone('parse');
+                setStepDone('extract');
+                setStepDone('classify');
+                setStepActive('experts');
+                document.getElementById('step-experts-detail').textContent = 'AI is suggesting experts...';
+            }
+
+            // Update title if available
+            if (data.title) {
+                document.getElementById('status-subtitle').textContent = data.title;
+            }
+        }
+
+        function setStepActive(stepId) {
+            const icon = document.getElementById(`step-${stepId}-icon`);
+            const title = document.getElementById(`step-${stepId}-title`);
+            if (icon) {
+                icon.className = 'step-icon active';
+                icon.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            }
+            if (title) title.className = 'step-title';
+        }
+
+        function setStepDone(stepId) {
+            const icon = document.getElementById(`step-${stepId}-icon`);
+            const title = document.getElementById(`step-${stepId}-title`);
+            if (icon) {
+                icon.className = 'step-icon done';
+                icon.innerHTML = '<i class="fas fa-check"></i>';
+            }
+            if (title) title.className = 'step-title';
+        }
+
+        function setStepReview(stepId) {
+            const icon = document.getElementById(`step-${stepId}-icon`);
+            const title = document.getElementById(`step-${stepId}-title`);
+            if (icon) {
+                icon.className = 'step-icon review';
+                icon.innerHTML = '<i class="fas fa-user-edit"></i>';
+            }
+            if (title) title.className = 'step-title';
+        }
+
+        function setStepError(stepId) {
+            const icon = document.getElementById(`step-${stepId}-icon`);
+            if (icon) {
+                icon.className = 'step-icon error';
+                icon.innerHTML = '<i class="fas fa-times"></i>';
+            }
+        }
+
+        // Show expert review UI
+        async function showExpertReview(data) {
+            addLog('Expert panel ready for review', 'success');
+
+            // Update status display
+            document.getElementById('status-icon').className = 'status-icon review';
+            document.getElementById('status-icon-inner').className = 'fas fa-user-edit';
+            document.getElementById('status-title').textContent = 'Review Expert Panel';
+            document.getElementById('status-subtitle').textContent = 'Customize the experts who will analyze comments';
+
+            // Update step indicators
+            setStepDone('parse');
+            setStepDone('extract');
+            setStepDone('classify');
+            setStepReview('experts');
+
+            // Widen container for expert review
+            document.querySelector('.container').classList.add('wide');
+
+            // Fetch suggested experts
+            try {
+                const response = await fetch(`${API_BASE}/papers/${paperId}/suggested-experts`);
+                const expertData = await response.json();
+                suggestedExperts = expertData.experts || [];
+                renderExpertCards();
+            } catch (e) {
+                addLog('Error loading experts: ' + e.message, 'error');
+            }
+
+            // Show expert review panel
+            document.getElementById('expert-review-panel').style.display = 'block';
+        }
+
+        // Render expert cards
+        function renderExpertCards() {
+            const container = document.getElementById('expert-cards');
+            container.innerHTML = suggestedExperts.map(expert => `
+                <div class="expert-card ${expert.is_custom ? 'custom' : ''}" data-id="${expert.id}">
+                    <div class="expert-icon-wrapper ${expert.color || 'blue'}">
+                        <i class="fas ${iconMap[expert.icon] || 'fa-user-graduate'}"></i>
+                    </div>
+                    <div class="expert-info">
+                        <div class="expert-name">${expert.name}</div>
+                        <div class="expert-expertise">${(expert.expertise || []).slice(0, 3).join(' • ')}</div>
+                        <div class="expert-tags">
+                            ${(expert.comment_types || []).map(t => `<span class="expert-tag">${t}</span>`).join('')}
+                        </div>
+                    </div>
+                    <div class="expert-actions">
+                        <button class="expert-action-btn" onclick="editExpert(${expert.id})" title="Edit">
+                            <i class="fas fa-pen"></i>
+                        </button>
+                        <button class="expert-action-btn delete" onclick="deleteExpert(${expert.id})" title="Remove">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Edit expert
+        function editExpert(id) {
+            const expert = suggestedExperts.find(e => e.id === id);
+            if (!expert) return;
+            editingExpertId = id;
+            showExpertModal(expert);
+        }
+
+        // Delete expert
+        async function deleteExpert(id) {
+            if (!confirm('Remove this expert from the panel?')) return;
+
+            try {
+                await fetch(`${API_BASE}/papers/${paperId}/suggested-experts/${id}`, {
+                    method: 'DELETE'
+                });
+                suggestedExperts = suggestedExperts.filter(e => e.id !== id);
+                renderExpertCards();
+                addLog('Expert removed', 'info');
+            } catch (e) {
+                addLog('Error removing expert: ' + e.message, 'error');
+            }
+        }
+
+        // Show add expert modal
+        function showAddExpertModal() {
+            editingExpertId = null;
+            showExpertModal({
+                name: '',
+                icon: 'user',
+                color: 'blue',
+                expertise: [],
+                comment_types: []
+            });
+        }
+
+        // Show expert modal (for add or edit)
+        function showExpertModal(expert) {
+            const modal = document.createElement('div');
+            modal.className = 'expert-modal-overlay';
+            modal.id = 'expert-modal';
+            modal.innerHTML = `
+                <div class="expert-modal">
+                    <h3 class="expert-modal-title">${editingExpertId ? 'Edit Expert' : 'Add Custom Expert'}</h3>
+                    <div class="expert-form-group">
+                        <label class="expert-form-label">Expert Name</label>
+                        <input type="text" class="expert-form-input" id="expert-name" value="${expert.name || ''}" placeholder="e.g., Dr. Statistical Methods Expert">
+                    </div>
+                    <div class="expert-form-group">
+                        <label class="expert-form-label">Expertise Areas (comma-separated)</label>
+                        <textarea class="expert-form-input expert-form-textarea" id="expert-expertise" placeholder="e.g., Statistical analysis, Experimental design, Data interpretation">${(expert.expertise || []).join(', ')}</textarea>
+                    </div>
+                    <div class="expert-form-group">
+                        <label class="expert-form-label">Comment Types (comma-separated)</label>
+                        <input type="text" class="expert-form-input" id="expert-comment-types" value="${(expert.comment_types || []).join(', ')}" placeholder="e.g., methodology, statistics, interpretation">
+                    </div>
+                    <div class="expert-form-group">
+                        <label class="expert-form-label">Icon & Color</label>
+                        <div class="icon-color-picker">
+                            <div class="icon-picker">
+                                ${Object.keys(iconMap).slice(0, 8).map(icon => `
+                                    <div class="icon-option ${expert.icon === icon ? 'selected' : ''}" data-icon="${icon}">
+                                        <i class="fas ${iconMap[icon]}"></i>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <div class="color-picker">
+                                ${['blue', 'green', 'purple', 'amber', 'teal', 'indigo', 'emerald', 'red'].map(color => `
+                                    <div class="color-option ${color} ${expert.color === color ? 'selected' : ''}" data-color="${color}"></div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="expert-modal-actions">
+                        <button class="btn btn-secondary" onclick="closeExpertModal()">Cancel</button>
+                        <button class="btn btn-primary" onclick="saveExpert()">
+                            <i class="fas fa-check"></i> ${editingExpertId ? 'Save Changes' : 'Add Expert'}
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            // Add click handlers for icon/color selection
+            modal.querySelectorAll('.icon-option').forEach(el => {
+                el.addEventListener('click', () => {
+                    modal.querySelectorAll('.icon-option').forEach(o => o.classList.remove('selected'));
+                    el.classList.add('selected');
+                });
+            });
+            modal.querySelectorAll('.color-option').forEach(el => {
+                el.addEventListener('click', () => {
+                    modal.querySelectorAll('.color-option').forEach(o => o.classList.remove('selected'));
+                    el.classList.add('selected');
+                });
+            });
+
+            // Close on overlay click
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) closeExpertModal();
+            });
+        }
+
+        function closeExpertModal() {
+            document.getElementById('expert-modal')?.remove();
+            editingExpertId = null;
+        }
+
+        async function saveExpert() {
+            const name = document.getElementById('expert-name').value.trim();
+            const expertise = document.getElementById('expert-expertise').value.split(',').map(s => s.trim()).filter(Boolean);
+            const commentTypes = document.getElementById('expert-comment-types').value.split(',').map(s => s.trim()).filter(Boolean);
+            const icon = document.querySelector('.icon-option.selected')?.dataset.icon || 'user';
+            const color = document.querySelector('.color-option.selected')?.dataset.color || 'blue';
+
+            if (!name) {
+                alert('Please enter an expert name');
+                return;
+            }
+
+            const expertData = { name, icon, color, expertise, comment_types: commentTypes };
+
+            try {
+                if (editingExpertId) {
+                    // Update existing
+                    await fetch(`${API_BASE}/papers/${paperId}/suggested-experts/${editingExpertId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(expertData)
+                    });
+                    const idx = suggestedExperts.findIndex(e => e.id === editingExpertId);
+                    if (idx >= 0) suggestedExperts[idx] = { ...suggestedExperts[idx], ...expertData };
+                    addLog('Expert updated', 'success');
+                } else {
+                    // Add new
+                    const response = await fetch(`${API_BASE}/papers/${paperId}/suggested-experts`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(expertData)
+                    });
+                    const result = await response.json();
+                    suggestedExperts.push({ ...expertData, id: result.id, is_custom: 1 });
+                    addLog('Expert added', 'success');
+                }
+                renderExpertCards();
+                closeExpertModal();
+            } catch (e) {
+                addLog('Error saving expert: ' + e.message, 'error');
+            }
+        }
+
+        // Confirm experts and continue processing
+        async function confirmExperts() {
+            if (suggestedExperts.length === 0) {
+                alert('Please add at least one expert');
+                return;
+            }
+
+            addLog('Confirming expert panel...', 'info');
+
+            try {
+                const response = await fetch(`${API_BASE}/papers/${paperId}/confirm-experts`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                addLog(`Expert analysis started with ${data.experts_count} experts`, 'success');
+
+                // Hide expert panel and resume polling
+                document.getElementById('expert-review-panel').style.display = 'none';
+                document.querySelector('.container').classList.remove('wide');
+
+                setStepDone('experts');
+                setStepActive('analysis');
+                document.getElementById('step-experts-detail').textContent = `${data.experts_count} experts confirmed`;
+                document.getElementById('status-icon').className = 'status-icon processing';
+                document.getElementById('status-icon-inner').className = 'fas fa-spinner fa-spin';
+                document.getElementById('status-title').textContent = 'Generating Analysis';
+                document.getElementById('status-subtitle').textContent = 'Experts are analyzing comments...';
+
+                // Resume polling
+                pollInterval = setInterval(pollStatus, 2000);
+
+            } catch (e) {
+                addLog('Error confirming experts: ' + e.message, 'error');
+            }
+        }
+
+        // Skip experts and go directly to webapp
+        async function skipExperts() {
+            if (!confirm('Skip expert analysis? You can generate it later from the webapp.')) return;
+
+            addLog('Skipping expert analysis...', 'info');
+            window.location.href = `webapp.html?paper=${paperId}`;
+        }
+
+        function showSuccess(data) {
+            // Hide stop button
+            document.getElementById('stop-btn').style.display = 'none';
+
+            document.getElementById('status-icon').className = 'status-icon success';
+            document.getElementById('status-icon-inner').className = 'fas fa-check';
+            document.getElementById('status-title').textContent = 'Ready';
+
+            const commentCount = data.comment_count || data.comments_found || 0;
+            document.getElementById('status-subtitle').textContent =
+                `${commentCount} comment${commentCount !== 1 ? 's' : ''} extracted`;
+
+            setStepDone('parse');
+            setStepDone('extract');
+            setStepDone('classify');
+            setStepDone('experts');
+            setStepDone('analysis');
+
+            document.getElementById('step-analysis-detail').textContent =
+                `${commentCount} comments analyzed`;
+
+            addLog('Processing complete! Redirecting...', 'success');
+
+            // Auto-redirect to webapp after brief delay
+            setTimeout(() => {
+                window.location.href = `webapp.html?paper=${paperId}`;
+            }, 1500);
+        }
+
+        function showError(message) {
+            // Hide stop button
+            document.getElementById('stop-btn').style.display = 'none';
+
+            document.getElementById('status-icon').className = 'status-icon error';
+            document.getElementById('status-icon-inner').className = 'fas fa-exclamation-triangle';
+            document.getElementById('status-title').textContent = 'Error';
+            document.getElementById('status-subtitle').textContent = message;
+
+            // Show back button only
+            document.getElementById('actions').style.display = 'flex';
+            document.getElementById('open-btn').style.display = 'none';
+
+            addLog('Error: ' + message, 'error');
+
+            if (pollInterval) clearInterval(pollInterval);
+        }
+
+        function addLog(message, type = '') {
+            const log = document.getElementById('log-output');
+            const line = document.createElement('div');
+            line.className = 'log-line';
+
+            // Format timestamp like server: [2026-01-18 10:45:03]
+            const now = new Date();
+            const timestamp = `[${now.toISOString().slice(0, 10)} ${now.toTimeString().slice(0, 8)}]`;
+
+            // Detect log type from message prefix for AI verbose output
+            let logLevel = type || 'info';
+            let levelText = 'INFO';
+            let displayMessage = message;
+
+            // Parse prefixes from server logs
+            if (message.startsWith('[Thinking]')) {
+                logLevel = 'thinking';
+                levelText = 'AI';
+                displayMessage = message.replace('[Thinking] ', '');
+            } else if (message.startsWith('[Tool]')) {
+                logLevel = 'tool';
+                levelText = 'TOOL';
+                displayMessage = message.replace('[Tool] ', '');
+            } else if (message.startsWith('[Result]')) {
+                logLevel = 'result';
+                levelText = 'RESULT';
+                displayMessage = message.replace('[Result] ', '');
+            } else if (message.startsWith('[Output]')) {
+                logLevel = 'output';
+                levelText = 'OUTPUT';
+                displayMessage = message.replace('[Output] ', '');
+            } else if (message.startsWith('[AI]')) {
+                logLevel = 'ai';
+                levelText = 'AI';
+                displayMessage = message.replace('[AI] ', '');
+            } else if (type === 'success') {
+                logLevel = 'success';
+                levelText = 'OK';
+            } else if (type === 'error') {
+                logLevel = 'error';
+                levelText = 'ERROR';
+            } else if (type === 'warn') {
+                logLevel = 'warn';
+                levelText = 'WARN';
+            } else {
+                logLevel = 'info';
+                levelText = 'INFO';
+            }
+
+            // Build terminal-style log line
+            line.innerHTML = `<span class="log-time">${timestamp}</span><span class="log-level ${logLevel}">[${levelText}]</span><span class="log-message">${escapeHtml(displayMessage)}</span>`;
+
+            log.appendChild(line);
+            log.scrollTop = log.scrollHeight;
+
+            // Auto-show log when processing starts
+            if (!log.classList.contains('show')) {
+                log.classList.add('show');
+                document.getElementById('log-toggle-text').textContent = 'Hide log';
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function toggleLog() {
+            const log = document.getElementById('log-output');
+            const text = document.getElementById('log-toggle-text');
+            log.classList.toggle('show');
+            text.textContent = log.classList.contains('show') ? 'Hide log' : 'Show log';
+        }
+    </script>
+</body>
+</html>

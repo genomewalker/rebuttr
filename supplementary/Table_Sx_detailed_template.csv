@@ -1,0 +1,2 @@
+query,target,evalue,bits,pident,alnlen,qcov,tcov,pass_evalue,pass_bits_20,pass_bits_35,pass_bits_50,pass_conservative
+example_query,NCBI|ABC123,1e-20,200,45.3,250,98.5,100.0,1,1,1,1,1

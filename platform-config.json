@@ -1,0 +1,18 @@
+{
+  "version": "2.0.0",
+  "multiPaper": true,
+  "projectFolder": "/Users/kbd606/Library/CloudStorage/OneDrive-Personal/Dropbox/LIFE/CPH/GeoGenetics/manuscripts/reviews",
+  "database": "data/review_platform.db",
+  "server": {
+    "port": 3001,
+    "host": "localhost"
+  },
+  "opencode": {
+    "model": "sonnet",
+    "agent": "general-purpose"
+  },
+  "ui": {
+    "theme": "light",
+    "defaultView": "projects"
+  }
+}
