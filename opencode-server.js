@@ -27,6 +27,7 @@ const os = require('os');
 const http = require('http');
 const crypto = require('crypto');
 const mammoth = require('mammoth');
+const { Document, Packer, Paragraph, TextRun, HeadingLevel, BorderStyle, ShadingType } = require('docx');
 
 // Generate short UUID for paper IDs
 function generatePaperId() {
@@ -3573,6 +3574,179 @@ function startApiServer(port = 3001) {
                 res.writeHead(500, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ error: e.message }));
             }
+            return;
+        }
+
+        // GET /papers/:id/export/docx - generate Word document with responses
+        const exportDocxMatch = req.url.match(/^\/papers\/([^/]+)\/export\/docx$/);
+        if (req.method === 'GET' && exportDocxMatch) {
+            const paperId = exportDocxMatch[1];
+            (async () => {
+            try {
+                if (!db) {
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'Database not available' }));
+                    return;
+                }
+
+                // Get paper info
+                const paper = db.prepare('SELECT * FROM papers WHERE id = ?').get(paperId);
+                if (!paper) {
+                    res.writeHead(404, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'Paper not found' }));
+                    return;
+                }
+
+                // Get reviewers and comments
+                const reviewers = db.prepare('SELECT * FROM reviewers WHERE paper_id = ?').all(paperId);
+                const allComments = db.prepare('SELECT * FROM comments WHERE paper_id = ?').all(paperId);
+
+                // Generate Word document
+                const children = [];
+
+                // Title
+                children.push(new Paragraph({
+                    heading: HeadingLevel.TITLE,
+                    children: [new TextRun({ text: "Response to Reviewers", bold: true, size: 32 })]
+                }));
+
+                // Manuscript info
+                children.push(new Paragraph({
+                    children: [
+                        new TextRun({ text: "Manuscript: ", bold: true }),
+                        new TextRun(paper.title || 'Untitled')
+                    ],
+                    spacing: { before: 200, after: 100 }
+                }));
+
+                if (paper.authors) {
+                    children.push(new Paragraph({
+                        children: [
+                            new TextRun({ text: "Authors: ", bold: true }),
+                            new TextRun(paper.authors)
+                        ],
+                        spacing: { after: 200 }
+                    }));
+                }
+
+                // Horizontal line
+                children.push(new Paragraph({
+                    border: { bottom: { style: BorderStyle.SINGLE, size: 1 } },
+                    spacing: { after: 400 }
+                }));
+
+                // Process each reviewer
+                for (const reviewer of reviewers) {
+                    const reviewerComments = allComments.filter(c => c.reviewer_id === reviewer.id);
+
+                    // Reviewer header
+                    children.push(new Paragraph({
+                        heading: HeadingLevel.HEADING_1,
+                        children: [new TextRun({ text: reviewer.name, bold: true, size: 28 })]
+                    }));
+
+                    // Process each comment
+                    for (const comment of reviewerComments) {
+                        const shortId = comment.id.replace(`${paperId}_`, '');
+
+                        // Comment header
+                        const statusColor = {
+                            'completed': '10B981',
+                            'in_progress': '3B82F6',
+                            'pending': 'F59E0B'
+                        }[comment.status] || 'F59E0B';
+
+                        children.push(new Paragraph({
+                            heading: HeadingLevel.HEADING_2,
+                            children: [
+                                new TextRun({ text: `Comment ${shortId}`, bold: true, size: 24 }),
+                                new TextRun({ text: ` [${(comment.type || 'minor').toUpperCase()}]`, size: 20 })
+                            ],
+                            spacing: { before: 300, after: 100 }
+                        }));
+
+                        // Original comment
+                        children.push(new Paragraph({
+                            children: [new TextRun({ text: "Reviewer Comment:", bold: true })],
+                            spacing: { before: 100 }
+                        }));
+
+                        children.push(new Paragraph({
+                            children: [new TextRun({ text: comment.original_text || '', italics: true })],
+                            indent: { left: 400 },
+                            shading: { type: ShadingType.CLEAR, fill: 'F3F4F6' },
+                            spacing: { after: 200 }
+                        }));
+
+                        // Our response
+                        if (comment.draft_response) {
+                            children.push(new Paragraph({
+                                children: [new TextRun({ text: "Our Response:", bold: true, color: '059669' })]
+                            }));
+
+                            // Split response by newlines
+                            const lines = comment.draft_response.split('\n');
+                            for (const line of lines) {
+                                if (line.trim()) {
+                                    children.push(new Paragraph({
+                                        children: [new TextRun(line)],
+                                        indent: { left: 400 },
+                                        spacing: { after: 100 }
+                                    }));
+                                }
+                            }
+                        } else {
+                            children.push(new Paragraph({
+                                children: [new TextRun({ text: "[No response drafted yet]", italics: true, color: '9CA3AF' })],
+                                indent: { left: 400 },
+                                spacing: { after: 200 }
+                            }));
+                        }
+
+                        // Separator
+                        children.push(new Paragraph({
+                            border: { bottom: { style: BorderStyle.SINGLE, size: 1, color: 'E5E7EB' } },
+                            spacing: { after: 200 }
+                        }));
+                    }
+                }
+
+                // Create document
+                const doc = new Document({
+                    styles: {
+                        default: {
+                            document: {
+                                run: { font: "Arial", size: 22 }
+                            }
+                        }
+                    },
+                    sections: [{
+                        properties: {
+                            page: {
+                                size: { width: 12240, height: 15840 },
+                                margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 }
+                            }
+                        },
+                        children: children
+                    }]
+                });
+
+                const buffer = await Packer.toBuffer(doc);
+                const filename = `response_to_reviewers_${paperId}.docx`;
+
+                res.writeHead(200, {
+                    'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'Content-Disposition': `attachment; filename="${filename}"`,
+                    'Content-Length': buffer.length
+                });
+                res.end(buffer);
+                log(`Generated Word document for paper ${paperId}`);
+            } catch (e) {
+                log(`Error generating Word document: ${e.message}`, 'ERROR');
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: e.message }));
+            }
+            })();
             return;
         }
 

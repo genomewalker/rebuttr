@@ -8408,9 +8408,54 @@ Provide expert guidance based on the manuscript context you have loaded. Be scie
             linkElement.click();
         }
 
-        function exportToWord() {
-            alert('Word export will be generated. This integrates with the docx skill in OpenCode.');
-            // This would trigger the docx generation through OpenCode
+        async function exportToWord() {
+            if (!currentPaperId) {
+                alert('Please select a paper first');
+                return;
+            }
+
+            try {
+                // Show loading state
+                const btn = event?.target?.closest('button');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+                }
+
+                // Call API to generate Word document
+                const response = await fetch(`${API_BASE}/papers/${currentPaperId}/export/docx`);
+
+                if (!response.ok) {
+                    throw new Error('Failed to generate document');
+                }
+
+                // Download the file
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `response_to_reviewers_${currentPaperId}.docx`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                a.remove();
+
+                // Restore button
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-download"></i> Generate Response Document';
+                }
+            } catch (error) {
+                console.error('Export error:', error);
+                alert('Error generating document: ' + error.message);
+
+                // Restore button on error
+                const btn = event?.target?.closest('button');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-download"></i> Generate Response Document';
+                }
+            }
         }
 
         function exportSummary() {
