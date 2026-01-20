@@ -425,6 +425,7 @@ a:hover {
     background: var(--paper);
     border-bottom: 1px solid var(--rule);
     flex-shrink: 0;
+    margin-left: 260px; /* Account for fixed sidebar */
 }
 
 .content-area {
@@ -2576,6 +2577,10 @@ a.comment-id:hover,
 
     .content-area {
         padding: var(--sp-4);
+        margin-left: 0; /* Remove sidebar offset on mobile */
+    }
+
+    .main-header {
         margin-left: 0; /* Remove sidebar offset on mobile */
     }
 

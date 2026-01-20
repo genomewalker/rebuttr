@@ -1210,13 +1210,23 @@ function saveCommentsToDB(reviewData, paperId = null) {
         const transaction = db.transaction((reviewers) => {
             let sortOrder = 0;
             for (const reviewer of reviewers) {
+                // Ensure reviewer ID has paper prefix
+                const reviewerId = paperId && !reviewer.id.startsWith(`${paperId}_`)
+                    ? `${paperId}_${reviewer.id}`
+                    : reviewer.id;
+
                 for (const comment of reviewer.comments) {
+                    // Ensure comment ID has paper prefix
+                    const commentId = paperId && !comment.id.startsWith(`${paperId}_`)
+                        ? `${paperId}_${comment.id}`
+                        : comment.id;
+
                     // Convert tags array to comma-separated string
                     const tagsStr = Array.isArray(comment.tags) ? comment.tags.join(',') : (comment.tags || '');
                     stmt.run(
-                        comment.id,
+                        commentId,
                         paperId,
-                        reviewer.id,
+                        reviewerId,
                         reviewer.name,
                         comment.type || 'minor',
                         comment.category || '',
