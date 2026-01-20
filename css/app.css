@@ -5509,7 +5509,7 @@ a.task-queue-id:hover {
    ===================================================== */
 
 .export-page {
-    max-width: 800px;
+    width: 100%;
 }
 
 .export-summary {
