@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Troubleshooting - Rebuttr Documentation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --primary: #4F46E5;
+            --secondary: #10B981;
+            --dark: #1F2937;
+            --darker: #111827;
+            --light: #F9FAFB;
+            --muted: #6B7280;
+            --border: #E5E7EB;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.7;
+            color: var(--dark);
+            background: var(--light);
+        }
+        header {
+            background: white;
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--dark);
+            text-decoration: none;
+        }
+        .logo img { width: 32px; }
+        nav a {
+            color: var(--muted);
+            text-decoration: none;
+            margin-left: 2rem;
+            font-weight: 500;
+        }
+        nav a:hover { color: var(--primary); }
+        .doc-layout {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            max-width: 1200px;
+            margin: 0 auto;
+            min-height: calc(100vh - 65px);
+        }
+        .sidebar {
+            background: white;
+            border-right: 1px solid var(--border);
+            padding: 2rem 1.5rem;
+            position: sticky;
+            top: 65px;
+            height: calc(100vh - 65px);
+            overflow-y: auto;
+        }
+        .sidebar h4 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--muted);
+            margin-bottom: 0.75rem;
+            margin-top: 1.5rem;
+        }
+        .sidebar h4:first-child { margin-top: 0; }
+        .sidebar a {
+            display: block;
+            padding: 0.5rem 0;
+            color: var(--dark);
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        .sidebar a:hover { color: var(--primary); }
+        .sidebar a.active {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        .content {
+            padding: 3rem;
+            max-width: 800px;
+        }
+        .content h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        .content .subtitle {
+            font-size: 1.25rem;
+            color: var(--muted);
+            margin-bottom: 2rem;
+        }
+        .content h2 {
+            font-size: 1.5rem;
+            margin: 2.5rem 0 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+        .content h3 {
+            font-size: 1.2rem;
+            margin: 1.5rem 0 0.75rem;
+        }
+        .content p {
+            margin-bottom: 1rem;
+        }
+        .content ul, .content ol {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .content li { margin-bottom: 0.5rem; }
+        .content code {
+            background: #E5E7EB;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+        }
+        .code-block {
+            background: var(--darker);
+            border-radius: 8px;
+            margin: 1rem 0;
+            overflow: hidden;
+        }
+        .code-header {
+            background: #374151;
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+            color: #9CA3AF;
+        }
+        .code-content {
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: #E5E7EB;
+            overflow-x: auto;
+        }
+        .code-content .comment { color: #6B7280; }
+        .issue-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin: 1.5rem 0;
+            overflow: hidden;
+        }
+        .issue-header {
+            background: #FEF2F2;
+            border-bottom: 1px solid #FECACA;
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .issue-header i {
+            color: #DC2626;
+        }
+        .issue-header h4 {
+            margin: 0;
+            font-size: 1rem;
+        }
+        .issue-body {
+            padding: 1.5rem;
+        }
+        .issue-body h5 {
+            color: var(--secondary);
+            font-size: 0.9rem;
+            margin: 1rem 0 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .issue-body h5:first-child {
+            margin-top: 0;
+        }
+        .alert {
+            padding: 1rem 1.25rem;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+        }
+        .alert-info {
+            background: #EEF2FF;
+            border-left: 4px solid var(--primary);
+        }
+        .alert-success {
+            background: #ECFDF5;
+            border-left: 4px solid var(--secondary);
+        }
+        .alert h5 {
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .alert p { margin: 0; font-size: 0.95rem; }
+        footer {
+            margin-top: 4rem;
+            padding: 2rem;
+            text-align: center;
+            color: var(--muted);
+            border-top: 1px solid var(--border);
+        }
+        footer a { color: var(--primary); text-decoration: none; }
+        @media (max-width: 768px) {
+            .doc-layout { grid-template-columns: 1fr; }
+            .sidebar { display: none; }
+            .content { padding: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <a href="../index.html" class="logo">
+                <img src="../assets/logo.svg" alt="Rebuttr">
+                Rebuttr Docs
+            </a>
+            <nav>
+                <a href="../index.html">Home</a>
+                <a href="../tutorial.html">Tutorial</a>
+                <a href="https://github.com/genomewalker/rebuttr">GitHub</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="doc-layout">
+        <aside class="sidebar">
+            <h4>Getting Started</h4>
+            <a href="installation.html">Installation</a>
+            <a href="quickstart.html">Quick Start</a>
+            <a href="../tutorial.html">Tutorial</a>
+
+            <h4>User Guide</h4>
+            <a href="importing.html">Importing Reviews</a>
+            <a href="ai-features.html">AI Features</a>
+            <a href="exporting.html">Exporting</a>
+            <a href="multi-paper.html">Multi-Paper</a>
+
+            <h4>Configuration</h4>
+            <a href="configuration.html">Configuration</a>
+            <a href="cli-reference.html">CLI Reference</a>
+            <a href="skills.html">AI Skills</a>
+
+            <h4>Reference</h4>
+            <a href="../api/">API Reference</a>
+            <a href="json-format.html">JSON Format</a>
+            <a href="troubleshooting.html" class="active">Troubleshooting</a>
+        </aside>
+
+        <main class="content">
+            <h1>Troubleshooting</h1>
+            <p class="subtitle">Solutions to common issues when using Rebuttr.</p>
+
+            <h2>Installation Issues</h2>
+
+            <div class="issue-card">
+                <div class="issue-header">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <h4>SQLite compilation errors on install</h4>
+                </div>
+                <div class="issue-body">
+                    <h5><i class="fas fa-question-circle"></i> Cause</h5>
+                    <p>Missing build tools required for native module compilation.</p>
+
+                    <h5><i class="fas fa-check-circle"></i> Solution</h5>
+                    <p>Install platform-specific build tools:</p>
+                    <div class="code-block">
+                        <div class="code-header">macOS</div>
+                        <div class="code-content">xcode-select --install</div>
+                    </div>
+                    <div class="code-block">
+                        <div class="code-header">Ubuntu/Debian</div>
+                        <div class="code-content">sudo apt-get install build-essential python3</div>
+                    </div>
+                    <div class="code-block">
+                        <div class="code-header">Windows</div>
+                        <div class="code-content">npm install -g windows-build-tools</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="issue-card">
+                <div class="issue-header">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <h4>Permission denied errors</h4>
+                </div>
+                <div class="issue-body">
+                    <h5><i class="fas fa-question-circle"></i> Cause</h5>
+                    <p>npm global packages require elevated permissions.</p>
+
+                    <h5><i class="fas fa-check-circle"></i> Solution</h5>
+                    <p>Fix npm permissions or use a node version manager:</p>
+                    <div class="code-block">
+                        <div class="code-header">Option 1: Fix npm permissions</div>
+                        <div class="code-content">
+mkdir ~/.npm-global
+npm config set prefix '~/.npm-global'
+<span class="comment"># Add to ~/.bashrc or ~/.zshrc:</span>
+export PATH=~/.npm-global/bin:$PATH
+                        </div>
+                    </div>
+                    <div class="code-block">
+                        <div class="code-header">Option 2: Use nvm</div>
+                        <div class="code-content">
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+nvm install 20
+nvm use 20
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <h2>Runtime Issues</h2>
+
+            <div class="issue-card">
+                <div class="issue-header">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <h4>Port 3001 already in use</h4>
+                </div>
+                <div class="issue-body">
+                    <h5><i class="fas fa-question-circle"></i> Cause</h5>
+                    <p>Another process is using port 3001, or a previous Rebuttr instance didn't shut down properly.</p>
+
+                    <h5><i class="fas fa-check-circle"></i> Solution</h5>
+                    <div class="code-block">
+                        <div class="code-header">Find and kill the process</div>
+                        <div class="code-content">
+<span class="comment"># Find process using port 3001</span>
+lsof -i :3001
+
+<span class="comment"># Kill the process</span>
+kill -9 &lt;PID&gt;
+
+<span class="comment"># Or use a different port</span>
+REBUTTR_PORT=3002 rebuttr
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="issue-card">
+                <div class="issue-header">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <h4>Browser doesn't open automatically</h4>
+                </div>
+                <div class="issue-body">
+                    <h5><i class="fas fa-question-circle"></i> Cause</h5>
+                    <p>The <code>open</code> command isn't available or the browser can't be detected.</p>
+
+                    <h5><i class="fas fa-check-circle"></i> Solution</h5>
+                    <p>Manually navigate to <code>http://localhost:3001</code> in your browser.</p>
+                </div>
+            </div>
+
+            <div class="issue-card">
+                <div class="issue-header">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <h4>Changes not saved between sessions</h4>
+                </div>
+                <div class="issue-body">
+                    <h5><i class="fas fa-question-circle"></i> Cause</h5>
+                    <p>Database connection issue or file permissions problem.</p>
+
+                    <h5><i class="fas fa-check-circle"></i> Solution</h5>
+                    <ol>
+                        <li>Check that the data directory exists and is writable:
+                            <div class="code-block">
+                                <div class="code-content">ls -la ~/Rebuttr/data/</div>
+                            </div>
+                        </li>
+                        <li>Check the server logs for database errors:
+                            <div class="code-block">
+                                <div class="code-content">cat /tmp/server.log</div>
+                            </div>
+                        </li>
+                        <li>Try resetting the database (backup first!):
+                            <div class="code-block">
+                                <div class="code-content">rm ~/Rebuttr/data/review_platform.db</div>
+                            </div>
+                        </li>
+                    </ol>
+                </div>
+            </div>
+
+            <h2>AI Features Issues</h2>
+
+            <div class="issue-card">
+                <div class="issue-header">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <h4>"OpenCode not ready" error</h4>
+                </div>
+                <div class="issue-body">
+                    <h5><i class="fas fa-question-circle"></i> Cause</h5>
+                    <p>OpenCode CLI isn't installed or configured properly.</p>
+
+                    <h5><i class="fas fa-check-circle"></i> Solution</h5>
+                    <ol>
+                        <li>Install OpenCode: <code>npm i -g opencode-ai</code></li>
+                        <li>Configure API key: Run <code>opencode</code> and follow the setup prompts</li>
+                        <li>Restart Rebuttr</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="issue-card">
+                <div class="issue-header">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <h4>Expert discussions not generating</h4>
+                </div>
+                <div class="issue-body">
+                    <h5><i class="fas fa-question-circle"></i> Cause</h5>
+                    <p>AI skills not installed or context not loaded.</p>
+
+                    <h5><i class="fas fa-check-circle"></i> Solution</h5>
+                    <ol>
+                        <li>Verify skills are installed:
+                            <div class="code-block">
+                                <div class="code-content">ls ~/.config/opencode/skill/</div>
+                            </div>
+                        </li>
+                        <li>Reinstall skills:
+                            <div class="code-block">
+                                <div class="code-content">npm i -g github:genomewalker/rebuttr</div>
+                            </div>
+                        </li>
+                        <li>Click "Update Context" in the AI Knowledge panel</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="issue-card">
+                <div class="issue-header">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <h4>"No draft responses found" when exporting</h4>
+                </div>
+                <div class="issue-body">
+                    <h5><i class="fas fa-question-circle"></i> Cause</h5>
+                    <p>Comments don't have responses saved yet.</p>
+
+                    <h5><i class="fas fa-check-circle"></i> Solution</h5>
+                    <p>You need to either:</p>
+                    <ul>
+                        <li>Write manual responses in the Response Builder</li>
+                        <li>Generate expert discussions and use their recommended responses</li>
+                        <li>Mark at least some comments as "Completed"</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h2>File Processing Issues</h2>
+
+            <div class="issue-card">
+                <div class="issue-header">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <h4>PDF not parsing correctly</h4>
+                </div>
+                <div class="issue-body">
+                    <h5><i class="fas fa-question-circle"></i> Cause</h5>
+                    <p>PDF has complex formatting, images, or is a scanned document.</p>
+
+                    <h5><i class="fas fa-check-circle"></i> Solution</h5>
+                    <ul>
+                        <li>Try exporting the PDF as text first</li>
+                        <li>Use a DOCX file instead if available</li>
+                        <li>Copy/paste the text directly into Rebuttr</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h2>Getting Help</h2>
+
+            <div class="alert alert-info">
+                <h5><i class="fas fa-info-circle"></i> Need More Help?</h5>
+                <p>If you can't find a solution here:</p>
+            </div>
+
+            <ul>
+                <li><strong>GitHub Issues:</strong> <a href="https://github.com/genomewalker/rebuttr/issues">Report a bug</a></li>
+                <li><strong>Debug logs:</strong> Run with <code>DEBUG=rebuttr:* rebuttr</code></li>
+                <li><strong>Server logs:</strong> Check <code>/tmp/server.log</code></li>
+            </ul>
+
+            <h2>Reset Everything</h2>
+            <p>If all else fails, you can completely reset Rebuttr:</p>
+
+            <div class="code-block">
+                <div class="code-header">Complete Reset (backup data first!)</div>
+                <div class="code-content">
+<span class="comment"># Uninstall</span>
+npm uninstall -g rebuttr
+
+<span class="comment"># Remove data (BACKUP FIRST!)</span>
+rm -rf ~/Rebuttr
+
+<span class="comment"># Remove skills</span>
+rm -rf ~/.config/opencode/skill/reviewer
+rm -rf ~/.config/opencode/skill/dna_auth
+rm -rf ~/.config/opencode/skill/ecology
+rm -rf ~/.config/opencode/skill/evolution
+rm -rf ~/.config/opencode/skill/virome
+rm -rf ~/.config/opencode/skill/methods
+
+<span class="comment"># Reinstall</span>
+npm i -g github:genomewalker/rebuttr
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <footer>
+        <p>
+            <a href="index.html">Documentation</a> |
+            <a href="https://github.com/genomewalker/rebuttr">GitHub</a> |
+            <a href="https://github.com/genomewalker/rebuttr/issues">Report an Issue</a>
+        </p>
+    </footer>
+</body>
+</html>

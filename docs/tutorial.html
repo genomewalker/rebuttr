@@ -226,6 +226,195 @@
             border: 1px solid var(--border);
         }
 
+        .screenshot-placeholder {
+            background: linear-gradient(135deg, #1F2937 0%, #374151 100%);
+            border-radius: 8px;
+            overflow: hidden;
+            color: white;
+        }
+
+        .placeholder-header {
+            background: rgba(0,0,0,0.3);
+            padding: 0.75rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .placeholder-header i {
+            color: var(--primary);
+        }
+
+        .placeholder-content {
+            padding: 1.5rem;
+        }
+
+        .placeholder-element {
+            margin-bottom: 0.75rem;
+        }
+
+        .placeholder-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+        }
+
+        .placeholder-box {
+            background: rgba(255,255,255,0.1);
+            border: 1px dashed rgba(255,255,255,0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .placeholder-box i {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            display: block;
+            color: var(--muted);
+        }
+
+        .placeholder-box span {
+            display: block;
+            font-weight: 500;
+        }
+
+        .placeholder-box small {
+            color: rgba(255,255,255,0.5);
+            font-size: 0.8rem;
+        }
+
+        .placeholder-steps {
+            margin: 1rem 0;
+        }
+
+        .placeholder-step {
+            padding: 0.5rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: rgba(255,255,255,0.5);
+        }
+
+        .placeholder-step.done {
+            color: var(--secondary);
+        }
+
+        .placeholder-step.active {
+            color: var(--accent);
+        }
+
+        .placeholder-comment {
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .placeholder-comment .badge {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .placeholder-comment .badge.major {
+            background: #FEE2E2;
+            color: #DC2626;
+        }
+
+        .placeholder-comment .badge.methodology {
+            background: #E0E7FF;
+            color: #4F46E5;
+        }
+
+        .placeholder-two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .placeholder-panel {
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .placeholder-panel strong {
+            display: block;
+            margin-bottom: 0.75rem;
+        }
+
+        .placeholder-checkbox {
+            padding: 0.4rem 0;
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.7);
+        }
+
+        .placeholder-textarea {
+            background: rgba(0,0,0,0.2);
+            border-radius: 4px;
+            padding: 0.75rem;
+            min-height: 80px;
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.5);
+        }
+
+        .placeholder-btn {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            background: rgba(255,255,255,0.1);
+            margin-left: 0.5rem;
+        }
+
+        .placeholder-btn.primary {
+            background: var(--primary);
+        }
+
+        .placeholder-export-options {
+            display: flex;
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .placeholder-export-btn {
+            padding: 0.75rem 1.25rem;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .placeholder-export-btn.primary {
+            background: var(--dark);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .placeholder-list {
+            margin-top: 0.5rem;
+        }
+
+        .placeholder-list-item {
+            padding: 0.75rem 1rem;
+            background: rgba(255,255,255,0.05);
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.9rem;
+        }
+
+        .placeholder-list-item i {
+            color: var(--muted);
+        }
+
         .screenshot-caption {
             text-align: center;
             color: var(--muted);
@@ -482,8 +671,38 @@
             <p class="step-description">Import your reviewer comments into Rebuttr. You can paste text, upload files, or use the CLI.</p>
 
             <div class="screenshot-container">
-                <img src="assets/tutorial/add-paper.png" alt="Add Paper Interface">
-                <p class="screenshot-caption">The Add Paper dialog in the web interface</p>
+                <div class="screenshot-placeholder">
+                    <div class="placeholder-header">
+                        <i class="fas fa-desktop"></i>
+                        <span>Main Upload Interface</span>
+                    </div>
+                    <div class="placeholder-content">
+                        <div class="placeholder-element" style="margin-bottom: 1rem;">
+                            <strong>NEW PAPER</strong> section with three drop zones:
+                        </div>
+                        <div class="placeholder-grid">
+                            <div class="placeholder-box">
+                                <i class="fas fa-file-alt"></i>
+                                <span>Manuscript</span>
+                                <small>.docx or .pdf</small>
+                            </div>
+                            <div class="placeholder-box">
+                                <i class="fas fa-comments"></i>
+                                <span>Reviews</span>
+                                <small>.docx with comments</small>
+                            </div>
+                            <div class="placeholder-box">
+                                <i class="fas fa-table"></i>
+                                <span>Supplementary</span>
+                                <small>.xlsx, .pdf, other</small>
+                            </div>
+                        </div>
+                        <div class="placeholder-element" style="margin-top: 1rem;">
+                            AI Settings dropdown + <strong>Process paper</strong> button
+                        </div>
+                    </div>
+                </div>
+                <p class="screenshot-caption">Upload your manuscript and reviews to get started</p>
             </div>
 
             <div class="step-instructions">
@@ -531,7 +750,26 @@
             <p class="step-description">Let AI analyze your comments and generate expert discussions with potential solutions.</p>
 
             <div class="screenshot-container">
-                <img src="assets/tutorial/processing.png" alt="Processing Interface">
+                <div class="screenshot-placeholder">
+                    <div class="placeholder-header">
+                        <i class="fas fa-cog fa-spin"></i>
+                        <span>Processing View</span>
+                    </div>
+                    <div class="placeholder-content">
+                        <div class="placeholder-element">
+                            <strong>Progress indicators</strong> for each processing step:
+                        </div>
+                        <div class="placeholder-steps">
+                            <div class="placeholder-step done"><i class="fas fa-check"></i> Parsing comments</div>
+                            <div class="placeholder-step done"><i class="fas fa-check"></i> Categorizing issues</div>
+                            <div class="placeholder-step active"><i class="fas fa-spinner fa-spin"></i> Generating expert discussions</div>
+                            <div class="placeholder-step"><i class="fas fa-circle"></i> Creating solutions</div>
+                        </div>
+                        <div class="placeholder-element" style="margin-top: 1rem;">
+                            Processing can be monitored in real-time
+                        </div>
+                    </div>
+                </div>
                 <p class="screenshot-caption">AI processing analyzes each comment and generates responses</p>
             </div>
 
@@ -566,8 +804,36 @@
             <p class="step-description">Browse AI-generated responses, select from strategies, and refine your answers.</p>
 
             <div class="screenshot-container">
-                <img src="assets/tutorial/comment-detail.png" alt="Comment Detail View">
-                <p class="screenshot-caption">The comment detail view with AI insights and response options</p>
+                <div class="screenshot-placeholder">
+                    <div class="placeholder-header">
+                        <i class="fas fa-edit"></i>
+                        <span>Response Builder - R1.1</span>
+                    </div>
+                    <div class="placeholder-content">
+                        <div class="placeholder-comment">
+                            <span class="badge major">major</span>
+                            <span class="badge methodology">Methodology</span>
+                            <p style="font-style: italic; margin-top: 0.5rem;">"A crucial analytical component that could substantiate these claims..."</p>
+                        </div>
+                        <div class="placeholder-two-col">
+                            <div class="placeholder-panel">
+                                <strong><i class="fas fa-lightbulb"></i> Potential Solutions</strong>
+                                <div class="placeholder-checkbox">☐ Perform Bayesian tip-dating...</div>
+                                <div class="placeholder-checkbox">☐ Mask deaminated sites...</div>
+                                <div class="placeholder-checkbox">☐ Remove recombinant regions...</div>
+                            </div>
+                            <div class="placeholder-panel">
+                                <strong><i class="fas fa-pen"></i> Your Response</strong>
+                                <div class="placeholder-textarea">Your response will appear here...</div>
+                            </div>
+                        </div>
+                        <div class="placeholder-element" style="margin-top: 1rem; text-align: right;">
+                            <span class="placeholder-btn">Cancel</span>
+                            <span class="placeholder-btn primary">Save Changes</span>
+                        </div>
+                    </div>
+                </div>
+                <p class="screenshot-caption">The Response Builder modal with AI-generated solutions and response editor</p>
             </div>
 
             <div class="step-instructions">
@@ -603,8 +869,34 @@
             <p class="step-description">Generate a formatted document with all your responses, ready for journal submission.</p>
 
             <div class="screenshot-container">
-                <img src="assets/tutorial/export.png" alt="Export Options">
-                <p class="screenshot-caption">Export options in the dashboard</p>
+                <div class="screenshot-placeholder">
+                    <div class="placeholder-header">
+                        <i class="fas fa-file-export"></i>
+                        <span>Export View</span>
+                    </div>
+                    <div class="placeholder-content">
+                        <div class="placeholder-element">
+                            <strong>Generate Rebuttal Letter</strong>
+                            <p style="font-size: 0.9rem; color: var(--muted);">Create a professional point-by-point response document</p>
+                        </div>
+                        <div class="placeholder-export-options">
+                            <div class="placeholder-export-btn primary">
+                                <i class="fas fa-file-word"></i> Generate Rebuttal Letter
+                            </div>
+                            <div class="placeholder-export-btn">
+                                <i class="fas fa-download"></i> Simple Export
+                            </div>
+                        </div>
+                        <div class="placeholder-element" style="margin-top: 1.5rem;">
+                            <strong>Data Export</strong>
+                        </div>
+                        <div class="placeholder-list">
+                            <div class="placeholder-list-item"><i class="fas fa-code"></i> Export JSON - Backup all review data</div>
+                            <div class="placeholder-list-item"><i class="fas fa-chart-bar"></i> Summary Report - Statistics and progress</div>
+                        </div>
+                    </div>
+                </div>
+                <p class="screenshot-caption">Export your responses as professional documents or data backups</p>
             </div>
 
             <div class="step-instructions">

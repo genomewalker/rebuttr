@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuration - Rebuttr Documentation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --primary: #4F46E5;
+            --secondary: #10B981;
+            --dark: #1F2937;
+            --darker: #111827;
+            --light: #F9FAFB;
+            --muted: #6B7280;
+            --border: #E5E7EB;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.7;
+            color: var(--dark);
+            background: var(--light);
+        }
+        header {
+            background: white;
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--dark);
+            text-decoration: none;
+        }
+        .logo img { width: 32px; }
+        nav a {
+            color: var(--muted);
+            text-decoration: none;
+            margin-left: 2rem;
+            font-weight: 500;
+        }
+        nav a:hover { color: var(--primary); }
+        .doc-layout {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            max-width: 1200px;
+            margin: 0 auto;
+            min-height: calc(100vh - 65px);
+        }
+        .sidebar {
+            background: white;
+            border-right: 1px solid var(--border);
+            padding: 2rem 1.5rem;
+            position: sticky;
+            top: 65px;
+            height: calc(100vh - 65px);
+            overflow-y: auto;
+        }
+        .sidebar h4 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--muted);
+            margin-bottom: 0.75rem;
+            margin-top: 1.5rem;
+        }
+        .sidebar h4:first-child { margin-top: 0; }
+        .sidebar a {
+            display: block;
+            padding: 0.5rem 0;
+            color: var(--dark);
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        .sidebar a:hover { color: var(--primary); }
+        .sidebar a.active {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        .content {
+            padding: 3rem;
+            max-width: 800px;
+        }
+        .content h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        .content .subtitle {
+            font-size: 1.25rem;
+            color: var(--muted);
+            margin-bottom: 2rem;
+        }
+        .content h2 {
+            font-size: 1.5rem;
+            margin: 2.5rem 0 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+        .content h3 {
+            font-size: 1.2rem;
+            margin: 1.5rem 0 0.75rem;
+        }
+        .content p {
+            margin-bottom: 1rem;
+        }
+        .content ul, .content ol {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .content li { margin-bottom: 0.5rem; }
+        .content code {
+            background: #E5E7EB;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+        }
+        .code-block {
+            background: var(--darker);
+            border-radius: 8px;
+            margin: 1rem 0;
+            overflow: hidden;
+        }
+        .code-header {
+            background: #374151;
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+            color: #9CA3AF;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .code-content {
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: #E5E7EB;
+            overflow-x: auto;
+        }
+        .code-content .comment { color: #6B7280; }
+        .code-content .key { color: #60A5FA; }
+        .code-content .string { color: #34D399; }
+        .code-content .number { color: #F59E0B; }
+        .alert {
+            padding: 1rem 1.25rem;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+        }
+        .alert-info {
+            background: #EEF2FF;
+            border-left: 4px solid var(--primary);
+        }
+        .alert-success {
+            background: #ECFDF5;
+            border-left: 4px solid var(--secondary);
+        }
+        .alert-warning {
+            background: #FFFBEB;
+            border-left: 4px solid #F59E0B;
+        }
+        .alert h5 {
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .alert p { margin: 0; font-size: 0.95rem; }
+        .config-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        .config-table th, .config-table td {
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border);
+            text-align: left;
+        }
+        .config-table th {
+            background: #F3F4F6;
+            font-weight: 600;
+        }
+        .config-table code {
+            background: white;
+        }
+        footer {
+            margin-top: 4rem;
+            padding: 2rem;
+            text-align: center;
+            color: var(--muted);
+            border-top: 1px solid var(--border);
+        }
+        footer a { color: var(--primary); text-decoration: none; }
+        @media (max-width: 768px) {
+            .doc-layout { grid-template-columns: 1fr; }
+            .sidebar { display: none; }
+            .content { padding: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <a href="../index.html" class="logo">
+                <img src="../assets/logo.svg" alt="Rebuttr">
+                Rebuttr Docs
+            </a>
+            <nav>
+                <a href="../index.html">Home</a>
+                <a href="../tutorial.html">Tutorial</a>
+                <a href="https://github.com/genomewalker/rebuttr">GitHub</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="doc-layout">
+        <aside class="sidebar">
+            <h4>Getting Started</h4>
+            <a href="installation.html">Installation</a>
+            <a href="quickstart.html">Quick Start</a>
+            <a href="../tutorial.html">Tutorial</a>
+
+            <h4>User Guide</h4>
+            <a href="importing.html">Importing Reviews</a>
+            <a href="ai-features.html">AI Features</a>
+            <a href="exporting.html">Exporting</a>
+            <a href="multi-paper.html">Multi-Paper</a>
+
+            <h4>Configuration</h4>
+            <a href="configuration.html" class="active">Configuration</a>
+            <a href="cli-reference.html">CLI Reference</a>
+            <a href="skills.html">AI Skills</a>
+
+            <h4>Reference</h4>
+            <a href="../api/">API Reference</a>
+            <a href="json-format.html">JSON Format</a>
+            <a href="troubleshooting.html">Troubleshooting</a>
+        </aside>
+
+        <main class="content">
+            <h1>Configuration</h1>
+            <p class="subtitle">Customize Rebuttr settings, AI models, and expert panels.</p>
+
+            <h2>Configuration File</h2>
+            <p>Rebuttr stores its configuration in <code>opencode-config.json</code> in your project directory. This file is created automatically when you first run Rebuttr.</p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span>opencode-config.json</span>
+                </div>
+                <div class="code-content">
+{
+  <span class="key">"model"</span>: <span class="string">"github-copilot/gpt-5-mini"</span>,
+  <span class="key">"agent"</span>: <span class="string">"general"</span>,
+  <span class="key">"variant"</span>: <span class="string">"high"</span>
+}
+                </div>
+            </div>
+
+            <h2>AI Model Settings</h2>
+            <p>Configure which AI model to use for generating responses and expert discussions.</p>
+
+            <table class="config-table">
+                <tr>
+                    <th>Setting</th>
+                    <th>Description</th>
+                    <th>Default</th>
+                </tr>
+                <tr>
+                    <td><code>model</code></td>
+                    <td>The AI model identifier to use</td>
+                    <td><code>github-copilot/gpt-5-mini</code></td>
+                </tr>
+                <tr>
+                    <td><code>agent</code></td>
+                    <td>Agent type: plan, build, explore, general</td>
+                    <td><code>general</code></td>
+                </tr>
+                <tr>
+                    <td><code>variant</code></td>
+                    <td>Reasoning effort: minimal, low, medium, high, xhigh, max</td>
+                    <td><code>high</code></td>
+                </tr>
+            </table>
+
+            <h3>Available Models</h3>
+            <ul>
+                <li><code>openai/gpt-5.2-codex</code> - Best for code-related responses</li>
+                <li><code>openai/gpt-5.2</code> - Latest GPT model</li>
+                <li><code>github-copilot/gpt-5.2</code> - GitHub Copilot integration</li>
+                <li><code>opencode/glm-4.7-free</code> - Free GLM model</li>
+                <li><code>opencode/gpt-5-nano</code> - Free tier option</li>
+            </ul>
+
+            <h3>Variant Levels</h3>
+            <p>The variant setting controls the reasoning effort of the AI:</p>
+            <ul>
+                <li><strong>minimal</strong> - Fastest responses, less reasoning</li>
+                <li><strong>low</strong> - Quick responses with basic reasoning</li>
+                <li><strong>medium</strong> - Balanced speed and quality</li>
+                <li><strong>high</strong> - More thorough reasoning (recommended)</li>
+                <li><strong>xhigh</strong> - Complex task handling</li>
+                <li><strong>max</strong> - Maximum reasoning depth</li>
+            </ul>
+
+            <h2>In-App Settings</h2>
+            <p>You can also change settings from within the webapp using the AI Settings panel in the sidebar.</p>
+
+            <div class="alert alert-info">
+                <h5><i class="fas fa-info-circle"></i> Real-time Updates</h5>
+                <p>Changes made in the AI Settings panel are applied immediately and saved to the configuration file.</p>
+            </div>
+
+            <h2>Expert Panels</h2>
+            <p>Rebuttr uses specialized AI experts to generate comprehensive responses. Each expert brings domain-specific knowledge:</p>
+
+            <table class="config-table">
+                <tr>
+                    <th>Expert</th>
+                    <th>Domain</th>
+                </tr>
+                <tr>
+                    <td><strong>Reviewer</strong></td>
+                    <td>Peer review process, academic writing, editorial standards</td>
+                </tr>
+                <tr>
+                    <td><strong>DNA Auth</strong></td>
+                    <td>Ancient DNA authentication, contamination assessment</td>
+                </tr>
+                <tr>
+                    <td><strong>Ecology</strong></td>
+                    <td>Ecological methods, environmental science</td>
+                </tr>
+                <tr>
+                    <td><strong>Evolution</strong></td>
+                    <td>Evolutionary biology, phylogenetics</td>
+                </tr>
+                <tr>
+                    <td><strong>Virome</strong></td>
+                    <td>Viral genomics, metagenomics</td>
+                </tr>
+                <tr>
+                    <td><strong>Methods</strong></td>
+                    <td>Statistical methods, bioinformatics</td>
+                </tr>
+            </table>
+
+            <p>Select which experts to consult when generating responses in the Response Builder modal.</p>
+
+            <h2>Data Storage</h2>
+            <p>Rebuttr uses SQLite for persistent data storage:</p>
+
+            <table class="config-table">
+                <tr>
+                    <th>Location</th>
+                    <th>Contents</th>
+                </tr>
+                <tr>
+                    <td><code>~/Rebuttr/data/</code></td>
+                    <td>SQLite database with papers, comments, responses</td>
+                </tr>
+                <tr>
+                    <td><code>~/Rebuttr/uploads/</code></td>
+                    <td>Uploaded manuscript and review files</td>
+                </tr>
+                <tr>
+                    <td><code>~/.config/opencode/skill/</code></td>
+                    <td>AI expert skill definitions</td>
+                </tr>
+            </table>
+
+            <h2>Environment Variables</h2>
+            <p>You can override certain settings with environment variables:</p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span>Terminal</span>
+                </div>
+                <div class="code-content">
+<span class="comment"># Set custom port</span>
+REBUTTR_PORT=3002 rebuttr
+
+<span class="comment"># Set data directory</span>
+REBUTTR_DATA_DIR=/path/to/data rebuttr
+
+<span class="comment"># Enable debug logging</span>
+DEBUG=rebuttr:* rebuttr
+                </div>
+            </div>
+
+            <h2>Next Steps</h2>
+            <ul>
+                <li><a href="cli-reference.html">CLI Reference</a> - Command-line options</li>
+                <li><a href="skills.html">AI Skills</a> - Customize expert panels</li>
+                <li><a href="troubleshooting.html">Troubleshooting</a> - Common issues</li>
+            </ul>
+        </main>
+    </div>
+
+    <footer>
+        <p>
+            <a href="index.html">Documentation</a> |
+            <a href="https://github.com/genomewalker/rebuttr">GitHub</a> |
+            <a href="troubleshooting.html">Troubleshooting</a>
+        </p>
+    </footer>
+</body>
+</html>

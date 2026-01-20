@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Reference - Rebuttr Documentation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --primary: #4F46E5;
+            --secondary: #10B981;
+            --dark: #1F2937;
+            --darker: #111827;
+            --light: #F9FAFB;
+            --muted: #6B7280;
+            --border: #E5E7EB;
+            --get: #10B981;
+            --post: #3B82F6;
+            --delete: #EF4444;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.7;
+            color: var(--dark);
+            background: var(--light);
+        }
+        header {
+            background: white;
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--dark);
+            text-decoration: none;
+        }
+        .logo img { width: 32px; }
+        nav a {
+            color: var(--muted);
+            text-decoration: none;
+            margin-left: 2rem;
+            font-weight: 500;
+        }
+        nav a:hover { color: var(--primary); }
+        .doc-layout {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            max-width: 1200px;
+            margin: 0 auto;
+            min-height: calc(100vh - 65px);
+        }
+        .sidebar {
+            background: white;
+            border-right: 1px solid var(--border);
+            padding: 2rem 1.5rem;
+            position: sticky;
+            top: 65px;
+            height: calc(100vh - 65px);
+            overflow-y: auto;
+        }
+        .sidebar h4 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--muted);
+            margin-bottom: 0.75rem;
+            margin-top: 1.5rem;
+        }
+        .sidebar h4:first-child { margin-top: 0; }
+        .sidebar a {
+            display: block;
+            padding: 0.5rem 0;
+            color: var(--dark);
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        .sidebar a:hover { color: var(--primary); }
+        .sidebar a.active {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        .content {
+            padding: 3rem;
+            max-width: 900px;
+        }
+        .content h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        .content .subtitle {
+            font-size: 1.25rem;
+            color: var(--muted);
+            margin-bottom: 2rem;
+        }
+        .content h2 {
+            font-size: 1.5rem;
+            margin: 2.5rem 0 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+        .content h3 {
+            font-size: 1.2rem;
+            margin: 1.5rem 0 0.75rem;
+        }
+        .content p {
+            margin-bottom: 1rem;
+        }
+        .content code {
+            background: #E5E7EB;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+        }
+        .code-block {
+            background: var(--darker);
+            border-radius: 8px;
+            margin: 1rem 0;
+            overflow: hidden;
+        }
+        .code-header {
+            background: #374151;
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+            color: #9CA3AF;
+        }
+        .code-content {
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: #E5E7EB;
+            overflow-x: auto;
+        }
+        .code-content .comment { color: #6B7280; }
+        .code-content .key { color: #60A5FA; }
+        .code-content .string { color: #34D399; }
+        .code-content .number { color: #F59E0B; }
+        .endpoint {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin: 1.5rem 0;
+            overflow: hidden;
+        }
+        .endpoint-header {
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .method {
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .method.get {
+            background: #ECFDF5;
+            color: var(--get);
+        }
+        .method.post {
+            background: #EFF6FF;
+            color: var(--post);
+        }
+        .method.delete {
+            background: #FEF2F2;
+            color: var(--delete);
+        }
+        .endpoint-path {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95rem;
+        }
+        .endpoint-body {
+            padding: 1.5rem;
+        }
+        .endpoint-body p {
+            margin-bottom: 1rem;
+        }
+        .param-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        .param-table th, .param-table td {
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border);
+            text-align: left;
+        }
+        .param-table th {
+            background: #F3F4F6;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+        .param-table code {
+            background: white;
+        }
+        .param-required {
+            color: var(--delete);
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .alert {
+            padding: 1rem 1.25rem;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+        }
+        .alert-info {
+            background: #EEF2FF;
+            border-left: 4px solid var(--primary);
+        }
+        .alert h5 {
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .alert p { margin: 0; font-size: 0.95rem; }
+        footer {
+            margin-top: 4rem;
+            padding: 2rem;
+            text-align: center;
+            color: var(--muted);
+            border-top: 1px solid var(--border);
+        }
+        footer a { color: var(--primary); text-decoration: none; }
+        @media (max-width: 768px) {
+            .doc-layout { grid-template-columns: 1fr; }
+            .sidebar { display: none; }
+            .content { padding: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <a href="../index.html" class="logo">
+                <img src="../assets/logo.svg" alt="Rebuttr">
+                Rebuttr Docs
+            </a>
+            <nav>
+                <a href="../index.html">Home</a>
+                <a href="../tutorial.html">Tutorial</a>
+                <a href="https://github.com/genomewalker/rebuttr">GitHub</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="doc-layout">
+        <aside class="sidebar">
+            <h4>API Reference</h4>
+            <a href="#overview" class="active">Overview</a>
+            <a href="#config">Configuration</a>
+            <a href="#papers">Papers</a>
+            <a href="#comments">Comments</a>
+            <a href="#experts">Expert Discussions</a>
+            <a href="#export">Export</a>
+            <a href="#state">App State</a>
+
+            <h4>Back to Docs</h4>
+            <a href="../guides/">Documentation</a>
+            <a href="../guides/troubleshooting.html">Troubleshooting</a>
+        </aside>
+
+        <main class="content">
+            <h1>API Reference</h1>
+            <p class="subtitle">REST API endpoints for programmatic access to Rebuttr.</p>
+
+            <div class="alert alert-info">
+                <h5><i class="fas fa-info-circle"></i> Base URL</h5>
+                <p>All endpoints are relative to <code>http://localhost:3001</code></p>
+            </div>
+
+            <h2 id="overview">Overview</h2>
+            <p>Rebuttr exposes a REST API for interacting with papers, comments, and AI features. The server runs on port 3001 by default.</p>
+
+            <h2 id="config">Configuration</h2>
+
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method get">GET</span>
+                    <span class="endpoint-path">/config</span>
+                </div>
+                <div class="endpoint-body">
+                    <p>Get the current configuration settings.</p>
+                    <h4>Response</h4>
+                    <div class="code-block">
+                        <div class="code-content">
+{
+  <span class="key">"model"</span>: <span class="string">"github-copilot/gpt-5-mini"</span>,
+  <span class="key">"agent"</span>: <span class="string">"general"</span>,
+  <span class="key">"variant"</span>: <span class="string">"high"</span>,
+  <span class="key">"available_models"</span>: [...],
+  <span class="key">"available_agents"</span>: [...],
+  <span class="key">"available_variants"</span>: [...]
+}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/config</span>
+                </div>
+                <div class="endpoint-body">
+                    <p>Update configuration settings.</p>
+                    <h4>Request Body</h4>
+                    <table class="param-table">
+                        <tr>
+                            <th>Field</th>
+                            <th>Type</th>
+                            <th>Description</th>
+                        </tr>
+                        <tr>
+                            <td><code>model</code></td>
+                            <td>string</td>
+                            <td>AI model identifier</td>
+                        </tr>
+                        <tr>
+                            <td><code>agent</code></td>
+                            <td>string</td>
+                            <td>Agent type (plan, build, explore, general)</td>
+                        </tr>
+                        <tr>
+                            <td><code>variant</code></td>
+                            <td>string</td>
+                            <td>Reasoning effort level</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <h2 id="papers">Papers</h2>
+
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method get">GET</span>
+                    <span class="endpoint-path">/api/papers</span>
+                </div>
+                <div class="endpoint-body">
+                    <p>List all papers in the database.</p>
+                    <h4>Response</h4>
+                    <div class="code-block">
+                        <div class="code-content">
+{
+  <span class="key">"papers"</span>: [
+    {
+      <span class="key">"id"</span>: <span class="string">"2ad87606"</span>,
+      <span class="key">"title"</span>: <span class="string">"Two-million-year-old microbial communities..."</span>,
+      <span class="key">"created_at"</span>: <span class="string">"2025-01-20T12:00:00Z"</span>,
+      <span class="key">"status"</span>: <span class="string">"ready"</span>
+    }
+  ]
+}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method get">GET</span>
+                    <span class="endpoint-path">/api/papers/incomplete</span>
+                </div>
+                <div class="endpoint-body">
+                    <p>List papers that are still being processed.</p>
+                </div>
+            </div>
+
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method delete">DELETE</span>
+                    <span class="endpoint-path">/api/papers/:id</span>
+                </div>
+                <div class="endpoint-body">
+                    <p>Delete a paper and all its associated data.</p>
+                    <table class="param-table">
+                        <tr>
+                            <th>Parameter</th>
+                            <th>Type</th>
+                            <th>Description</th>
+                        </tr>
+                        <tr>
+                            <td><code>id</code> <span class="param-required">required</span></td>
+                            <td>string</td>
+                            <td>Paper ID</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <h2 id="comments">Comments</h2>
+
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method get">GET</span>
+                    <span class="endpoint-path">/db/comments</span>
+                </div>
+                <div class="endpoint-body">
+                    <p>Load all comments for a paper.</p>
+                    <table class="param-table">
+                        <tr>
+                            <th>Query Parameter</th>
+                            <th>Type</th>
+                            <th>Description</th>
+                        </tr>
+                        <tr>
+                            <td><code>paper</code> <span class="param-required">required</span></td>
+                            <td>string</td>
+                            <td>Paper ID</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/db/comments</span>
+                </div>
+                <div class="endpoint-body">
+                    <p>Save all comments for a paper.</p>
+                    <h4>Request Body</h4>
+                    <table class="param-table">
+                        <tr>
+                            <th>Field</th>
+                            <th>Type</th>
+                            <th>Description</th>
+                        </tr>
+                        <tr>
+                            <td><code>paperId</code> <span class="param-required">required</span></td>
+                            <td>string</td>
+                            <td>Paper ID</td>
+                        </tr>
+                        <tr>
+                            <td><code>comments</code> <span class="param-required">required</span></td>
+                            <td>array</td>
+                            <td>Array of comment objects</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <h2 id="experts">Expert Discussions</h2>
+
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method get">GET</span>
+                    <span class="endpoint-path">/db/experts</span>
+                </div>
+                <div class="endpoint-body">
+                    <p>Load expert discussions for a paper.</p>
+                    <table class="param-table">
+                        <tr>
+                            <th>Query Parameter</th>
+                            <th>Type</th>
+                            <th>Description</th>
+                        </tr>
+                        <tr>
+                            <td><code>paper</code> <span class="param-required">required</span></td>
+                            <td>string</td>
+                            <td>Paper ID</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/db/expert</span>
+                </div>
+                <div class="endpoint-body">
+                    <p>Save an expert discussion for a comment.</p>
+                    <h4>Request Body</h4>
+                    <table class="param-table">
+                        <tr>
+                            <th>Field</th>
+                            <th>Type</th>
+                            <th>Description</th>
+                        </tr>
+                        <tr>
+                            <td><code>paperId</code> <span class="param-required">required</span></td>
+                            <td>string</td>
+                            <td>Paper ID</td>
+                        </tr>
+                        <tr>
+                            <td><code>commentId</code> <span class="param-required">required</span></td>
+                            <td>string</td>
+                            <td>Comment ID</td>
+                        </tr>
+                        <tr>
+                            <td><code>discussion</code> <span class="param-required">required</span></td>
+                            <td>object</td>
+                            <td>Expert discussion data</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <h2 id="export">Export</h2>
+
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/papers/:id/export/ai-rebuttal</span>
+                </div>
+                <div class="endpoint-body">
+                    <p>Generate an AI-powered rebuttal letter as a Word document.</p>
+                    <table class="param-table">
+                        <tr>
+                            <th>Parameter</th>
+                            <th>Type</th>
+                            <th>Description</th>
+                        </tr>
+                        <tr>
+                            <td><code>id</code> <span class="param-required">required</span></td>
+                            <td>string</td>
+                            <td>Paper ID</td>
+                        </tr>
+                    </table>
+                    <h4>Response</h4>
+                    <p>Returns a <code>.docx</code> file download.</p>
+                </div>
+            </div>
+
+            <h2 id="state">App State</h2>
+
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method get">GET</span>
+                    <span class="endpoint-path">/db/state/:key</span>
+                </div>
+                <div class="endpoint-body">
+                    <p>Load saved application state by key.</p>
+                </div>
+            </div>
+
+            <div class="endpoint">
+                <div class="endpoint-header">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/db/state</span>
+                </div>
+                <div class="endpoint-body">
+                    <p>Save application state.</p>
+                    <h4>Request Body</h4>
+                    <table class="param-table">
+                        <tr>
+                            <th>Field</th>
+                            <th>Type</th>
+                            <th>Description</th>
+                        </tr>
+                        <tr>
+                            <td><code>key</code> <span class="param-required">required</span></td>
+                            <td>string</td>
+                            <td>State key identifier</td>
+                        </tr>
+                        <tr>
+                            <td><code>value</code> <span class="param-required">required</span></td>
+                            <td>any</td>
+                            <td>State data to save</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <h2>Error Handling</h2>
+            <p>All endpoints return JSON error responses:</p>
+            <div class="code-block">
+                <div class="code-content">
+{
+  <span class="key">"error"</span>: <span class="string">"Error message describing what went wrong"</span>
+}
+                </div>
+            </div>
+
+            <p>HTTP status codes:</p>
+            <ul>
+                <li><code>200</code> - Success</li>
+                <li><code>400</code> - Bad request (missing/invalid parameters)</li>
+                <li><code>404</code> - Resource not found</li>
+                <li><code>500</code> - Server error</li>
+            </ul>
+        </main>
+    </div>
+
+    <footer>
+        <p>
+            <a href="../guides/">Documentation</a> |
+            <a href="https://github.com/genomewalker/rebuttr">GitHub</a> |
+            <a href="../guides/troubleshooting.html">Troubleshooting</a>
+        </p>
+    </footer>
+</body>
+</html>
