@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON Format - Rebuttr Documentation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --primary: #4F46E5;
+            --secondary: #10B981;
+            --dark: #1F2937;
+            --darker: #111827;
+            --light: #F9FAFB;
+            --muted: #6B7280;
+            --border: #E5E7EB;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.7;
+            color: var(--dark);
+            background: var(--light);
+        }
+        header {
+            background: white;
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--dark);
+            text-decoration: none;
+        }
+        .logo img { width: 32px; }
+        nav a {
+            color: var(--muted);
+            text-decoration: none;
+            margin-left: 2rem;
+            font-weight: 500;
+        }
+        nav a:hover { color: var(--primary); }
+        .doc-layout {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            max-width: 1200px;
+            margin: 0 auto;
+            min-height: calc(100vh - 65px);
+        }
+        .sidebar {
+            background: white;
+            border-right: 1px solid var(--border);
+            padding: 2rem 1.5rem;
+            position: sticky;
+            top: 65px;
+            height: calc(100vh - 65px);
+            overflow-y: auto;
+        }
+        .sidebar h4 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--muted);
+            margin-bottom: 0.75rem;
+            margin-top: 1.5rem;
+        }
+        .sidebar h4:first-child { margin-top: 0; }
+        .sidebar a {
+            display: block;
+            padding: 0.5rem 0;
+            color: var(--dark);
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        .sidebar a:hover { color: var(--primary); }
+        .sidebar a.active {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        .content {
+            padding: 3rem;
+            max-width: 800px;
+        }
+        .content h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        .content .subtitle {
+            font-size: 1.25rem;
+            color: var(--muted);
+            margin-bottom: 2rem;
+        }
+        .content h2 {
+            font-size: 1.5rem;
+            margin: 2.5rem 0 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+        .content h3 {
+            font-size: 1.2rem;
+            margin: 1.5rem 0 0.75rem;
+        }
+        .content p {
+            margin-bottom: 1rem;
+        }
+        .content ul, .content ol {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .content li { margin-bottom: 0.5rem; }
+        .content code {
+            background: #E5E7EB;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+        }
+        .code-block {
+            background: var(--darker);
+            border-radius: 8px;
+            margin: 1rem 0;
+            overflow: hidden;
+        }
+        .code-header {
+            background: #374151;
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+            color: #9CA3AF;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .code-content {
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: #E5E7EB;
+            overflow-x: auto;
+        }
+        .code-content .comment { color: #6B7280; }
+        .code-content .string { color: #A5D6FF; }
+        .code-content .key { color: #7EE787; }
+        .code-content .number { color: #F9A8D4; }
+        .code-content .bool { color: #FCA5A5; }
+        .copy-btn {
+            background: transparent;
+            border: none;
+            color: #9CA3AF;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+        }
+        .copy-btn:hover { color: white; }
+        .alert {
+            padding: 1rem 1.25rem;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+        }
+        .alert-info {
+            background: #EEF2FF;
+            border-left: 4px solid var(--primary);
+        }
+        .alert-success {
+            background: #ECFDF5;
+            border-left: 4px solid var(--secondary);
+        }
+        .alert-warning {
+            background: #FFFBEB;
+            border-left: 4px solid #F59E0B;
+        }
+        .alert h5 {
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .alert p { margin: 0; font-size: 0.95rem; }
+        .schema-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+        }
+        .schema-table th, .schema-table td {
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border);
+            text-align: left;
+        }
+        .schema-table th {
+            background: #F3F4F6;
+            font-weight: 600;
+        }
+        .schema-table code {
+            font-size: 0.85em;
+        }
+        .type-badge {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .type-string { background: #DBEAFE; color: #1E40AF; }
+        .type-number { background: #FCE7F3; color: #9D174D; }
+        .type-boolean { background: #FEE2E2; color: #991B1B; }
+        .type-array { background: #D1FAE5; color: #065F46; }
+        .type-object { background: #E0E7FF; color: #3730A3; }
+        footer {
+            margin-top: 4rem;
+            padding: 2rem;
+            text-align: center;
+            color: var(--muted);
+            border-top: 1px solid var(--border);
+        }
+        footer a { color: var(--primary); text-decoration: none; }
+        @media (max-width: 768px) {
+            .doc-layout { grid-template-columns: 1fr; }
+            .sidebar { display: none; }
+            .content { padding: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <a href="../index.html" class="logo">
+                <img src="../assets/logo.svg" alt="Rebuttr">
+                Rebuttr Docs
+            </a>
+            <nav>
+                <a href="../index.html">Home</a>
+                <a href="../tutorial.html">Tutorial</a>
+                <a href="https://github.com/genomewalker/rebuttr">GitHub</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="doc-layout">
+        <aside class="sidebar">
+            <h4>Getting Started</h4>
+            <a href="installation.html">Installation</a>
+            <a href="quickstart.html">Quick Start</a>
+            <a href="../tutorial.html">Tutorial</a>
+
+            <h4>User Guide</h4>
+            <a href="importing.html">Importing Reviews</a>
+            <a href="ai-features.html">AI Features</a>
+            <a href="exporting.html">Exporting</a>
+            <a href="multi-paper.html">Multi-Paper</a>
+
+            <h4>Configuration</h4>
+            <a href="configuration.html">Configuration</a>
+            <a href="cli-reference.html">CLI Reference</a>
+            <a href="skills.html">AI Skills</a>
+
+            <h4>Reference</h4>
+            <a href="../api/">API Reference</a>
+            <a href="json-format.html" class="active">JSON Format</a>
+            <a href="troubleshooting.html">Troubleshooting</a>
+        </aside>
+
+        <main class="content">
+            <h1>JSON Format</h1>
+            <p class="subtitle">Complete specification for Rebuttr's JSON data format used in imports, exports, and API interactions.</p>
+
+            <h2>Overview</h2>
+            <p>Rebuttr uses JSON for data interchange, allowing you to:</p>
+            <ul>
+                <li>Import structured reviews programmatically</li>
+                <li>Export papers for backup or sharing</li>
+                <li>Integrate with external tools and workflows</li>
+                <li>Migrate data between Rebuttr installations</li>
+            </ul>
+
+            <h2>Paper Schema</h2>
+            <p>The root object for a complete paper export:</p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span>paper.json</span>
+                    <button class="copy-btn"><i class="far fa-copy"></i></button>
+                </div>
+                <div class="code-content">
+{
+  <span class="key">"id"</span>: <span class="string">"paper-uuid-1234"</span>,
+  <span class="key">"title"</span>: <span class="string">"My Research Paper Title"</span>,
+  <span class="key">"journal"</span>: <span class="string">"Nature Communications"</span>,
+  <span class="key">"authors"</span>: [<span class="string">"Author One"</span>, <span class="string">"Author Two"</span>],
+  <span class="key">"status"</span>: <span class="string">"inprogress"</span>,
+  <span class="key">"currentRound"</span>: <span class="number">1</span>,
+  <span class="key">"tags"</span>: [<span class="string">"priority"</span>, <span class="string">"grant-123"</span>],
+  <span class="key">"createdAt"</span>: <span class="string">"2024-01-15T10:30:00Z"</span>,
+  <span class="key">"updatedAt"</span>: <span class="string">"2024-01-20T14:22:00Z"</span>,
+  <span class="key">"reviews"</span>: [ ... ],
+  <span class="key">"metadata"</span>: { ... }
+}
+                </div>
+            </div>
+
+            <h3>Paper Fields</h3>
+            <table class="schema-table">
+                <tr>
+                    <th>Field</th>
+                    <th>Type</th>
+                    <th>Required</th>
+                    <th>Description</th>
+                </tr>
+                <tr>
+                    <td><code>id</code></td>
+                    <td><span class="type-badge type-string">string</span></td>
+                    <td>Auto</td>
+                    <td>Unique identifier (UUID)</td>
+                </tr>
+                <tr>
+                    <td><code>title</code></td>
+                    <td><span class="type-badge type-string">string</span></td>
+                    <td>Yes</td>
+                    <td>Paper title</td>
+                </tr>
+                <tr>
+                    <td><code>journal</code></td>
+                    <td><span class="type-badge type-string">string</span></td>
+                    <td>No</td>
+                    <td>Target journal name</td>
+                </tr>
+                <tr>
+                    <td><code>authors</code></td>
+                    <td><span class="type-badge type-array">array</span></td>
+                    <td>No</td>
+                    <td>List of author names</td>
+                </tr>
+                <tr>
+                    <td><code>status</code></td>
+                    <td><span class="type-badge type-string">string</span></td>
+                    <td>No</td>
+                    <td>One of: draft, inprogress, completed, submitted</td>
+                </tr>
+                <tr>
+                    <td><code>currentRound</code></td>
+                    <td><span class="type-badge type-number">number</span></td>
+                    <td>No</td>
+                    <td>Current revision round (default: 1)</td>
+                </tr>
+                <tr>
+                    <td><code>tags</code></td>
+                    <td><span class="type-badge type-array">array</span></td>
+                    <td>No</td>
+                    <td>List of tag strings</td>
+                </tr>
+                <tr>
+                    <td><code>createdAt</code></td>
+                    <td><span class="type-badge type-string">string</span></td>
+                    <td>Auto</td>
+                    <td>ISO 8601 timestamp</td>
+                </tr>
+                <tr>
+                    <td><code>updatedAt</code></td>
+                    <td><span class="type-badge type-string">string</span></td>
+                    <td>Auto</td>
+                    <td>ISO 8601 timestamp</td>
+                </tr>
+                <tr>
+                    <td><code>reviews</code></td>
+                    <td><span class="type-badge type-array">array</span></td>
+                    <td>No</td>
+                    <td>Array of Review objects</td>
+                </tr>
+                <tr>
+                    <td><code>metadata</code></td>
+                    <td><span class="type-badge type-object">object</span></td>
+                    <td>No</td>
+                    <td>Custom metadata</td>
+                </tr>
+            </table>
+
+            <h2>Review Schema</h2>
+            <p>Each review represents one reviewer's comments:</p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span>Review Object</span>
+                    <button class="copy-btn"><i class="far fa-copy"></i></button>
+                </div>
+                <div class="code-content">
+{
+  <span class="key">"id"</span>: <span class="string">"review-uuid-5678"</span>,
+  <span class="key">"reviewer"</span>: <span class="string">"Reviewer 1"</span>,
+  <span class="key">"round"</span>: <span class="number">1</span>,
+  <span class="key">"receivedAt"</span>: <span class="string">"2024-01-15T10:30:00Z"</span>,
+  <span class="key">"overallSentiment"</span>: <span class="string">"constructive"</span>,
+  <span class="key">"comments"</span>: [ ... ]
+}
+                </div>
+            </div>
+
+            <h3>Review Fields</h3>
+            <table class="schema-table">
+                <tr>
+                    <th>Field</th>
+                    <th>Type</th>
+                    <th>Required</th>
+                    <th>Description</th>
+                </tr>
+                <tr>
+                    <td><code>id</code></td>
+                    <td><span class="type-badge type-string">string</span></td>
+                    <td>Auto</td>
+                    <td>Unique identifier</td>
+                </tr>
+                <tr>
+                    <td><code>reviewer</code></td>
+                    <td><span class="type-badge type-string">string</span></td>
+                    <td>Yes</td>
+                    <td>Reviewer identifier (e.g., "Reviewer 1", "Editor")</td>
+                </tr>
+                <tr>
+                    <td><code>round</code></td>
+                    <td><span class="type-badge type-number">number</span></td>
+                    <td>No</td>
+                    <td>Revision round number</td>
+                </tr>
+                <tr>
+                    <td><code>receivedAt</code></td>
+                    <td><span class="type-badge type-string">string</span></td>
+                    <td>No</td>
+                    <td>When review was received</td>
+                </tr>
+                <tr>
+                    <td><code>overallSentiment</code></td>
+                    <td><span class="type-badge type-string">string</span></td>
+                    <td>No</td>
+                    <td>positive, constructive, critical, mixed</td>
+                </tr>
+                <tr>
+                    <td><code>comments</code></td>
+                    <td><span class="type-badge type-array">array</span></td>
+                    <td>Yes</td>
+                    <td>Array of Comment objects</td>
+                </tr>
+            </table>
+
+            <h2>Comment Schema</h2>
+            <p>Individual reviewer comments with responses:</p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span>Comment Object</span>
+                    <button class="copy-btn"><i class="far fa-copy"></i></button>
+                </div>
+                <div class="code-content">
+{
+  <span class="key">"id"</span>: <span class="string">"comment-uuid-9012"</span>,
+  <span class="key">"text"</span>: <span class="string">"The methodology section lacks detail about sample selection criteria."</span>,
+  <span class="key">"category"</span>: <span class="string">"major"</span>,
+  <span class="key">"lineReference"</span>: <span class="string">"Lines 45-67"</span>,
+  <span class="key">"section"</span>: <span class="string">"Methods"</span>,
+  <span class="key">"status"</span>: <span class="string">"completed"</span>,
+  <span class="key">"response"</span>: {
+    <span class="key">"text"</span>: <span class="string">"We thank the reviewer for this observation..."</span>,
+    <span class="key">"createdAt"</span>: <span class="string">"2024-01-18T09:15:00Z"</span>,
+    <span class="key">"aiGenerated"</span>: <span class="bool">true</span>,
+    <span class="key">"edited"</span>: <span class="bool">true</span>
+  },
+  <span class="key">"solutions"</span>: [
+    {
+      <span class="key">"text"</span>: <span class="string">"Add detailed sample selection criteria to Methods"</span>,
+      <span class="key">"completed"</span>: <span class="bool">true</span>
+    }
+  ]
+}
+                </div>
+            </div>
+
+            <h3>Comment Fields</h3>
+            <table class="schema-table">
+                <tr>
+                    <th>Field</th>
+                    <th>Type</th>
+                    <th>Required</th>
+                    <th>Description</th>
+                </tr>
+                <tr>
+                    <td><code>id</code></td>
+                    <td><span class="type-badge type-string">string</span></td>
+                    <td>Auto</td>
+                    <td>Unique identifier</td>
+                </tr>
+                <tr>
+                    <td><code>text</code></td>
+                    <td><span class="type-badge type-string">string</span></td>
+                    <td>Yes</td>
+                    <td>The reviewer's comment text</td>
+                </tr>
+                <tr>
+                    <td><code>category</code></td>
+                    <td><span class="type-badge type-string">string</span></td>
+                    <td>No</td>
+                    <td>major, minor, technical, editorial</td>
+                </tr>
+                <tr>
+                    <td><code>lineReference</code></td>
+                    <td><span class="type-badge type-string">string</span></td>
+                    <td>No</td>
+                    <td>Reference to manuscript lines</td>
+                </tr>
+                <tr>
+                    <td><code>section</code></td>
+                    <td><span class="type-badge type-string">string</span></td>
+                    <td>No</td>
+                    <td>Manuscript section referenced</td>
+                </tr>
+                <tr>
+                    <td><code>status</code></td>
+                    <td><span class="type-badge type-string">string</span></td>
+                    <td>No</td>
+                    <td>pending, inprogress, completed</td>
+                </tr>
+                <tr>
+                    <td><code>response</code></td>
+                    <td><span class="type-badge type-object">object</span></td>
+                    <td>No</td>
+                    <td>Response object (see below)</td>
+                </tr>
+                <tr>
+                    <td><code>solutions</code></td>
+                    <td><span class="type-badge type-array">array</span></td>
+                    <td>No</td>
+                    <td>Array of Solution objects</td>
+                </tr>
+            </table>
+
+            <h2>Response Schema</h2>
+            <table class="schema-table">
+                <tr>
+                    <th>Field</th>
+                    <th>Type</th>
+                    <th>Description</th>
+                </tr>
+                <tr>
+                    <td><code>text</code></td>
+                    <td><span class="type-badge type-string">string</span></td>
+                    <td>The response text</td>
+                </tr>
+                <tr>
+                    <td><code>createdAt</code></td>
+                    <td><span class="type-badge type-string">string</span></td>
+                    <td>ISO 8601 timestamp</td>
+                </tr>
+                <tr>
+                    <td><code>aiGenerated</code></td>
+                    <td><span class="type-badge type-boolean">boolean</span></td>
+                    <td>Whether AI generated the initial draft</td>
+                </tr>
+                <tr>
+                    <td><code>edited</code></td>
+                    <td><span class="type-badge type-boolean">boolean</span></td>
+                    <td>Whether user edited the response</td>
+                </tr>
+            </table>
+
+            <h2>Import Format</h2>
+            <p>For importing reviews, a simplified format is supported:</p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span>import-reviews.json</span>
+                    <button class="copy-btn"><i class="far fa-copy"></i></button>
+                </div>
+                <div class="code-content">
+{
+  <span class="key">"reviewer"</span>: <span class="string">"Reviewer 1"</span>,
+  <span class="key">"comments"</span>: [
+    {
+      <span class="key">"text"</span>: <span class="string">"The sample size is too small."</span>,
+      <span class="key">"category"</span>: <span class="string">"major"</span>
+    },
+    {
+      <span class="key">"text"</span>: <span class="string">"Figure 2 needs better labels."</span>,
+      <span class="key">"category"</span>: <span class="string">"minor"</span>,
+      <span class="key">"lineReference"</span>: <span class="string">"Figure 2"</span>
+    }
+  ]
+}
+                </div>
+            </div>
+
+            <div class="alert alert-info">
+                <h5><i class="fas fa-info-circle"></i> Minimal Import</h5>
+                <p>Only <code>reviewer</code> and <code>comments[].text</code> are required for import. All other fields are optional and will be auto-populated or left empty.</p>
+            </div>
+
+            <h2>Bulk Import</h2>
+            <p>Import multiple reviewers at once:</p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span>bulk-import.json</span>
+                    <button class="copy-btn"><i class="far fa-copy"></i></button>
+                </div>
+                <div class="code-content">
+{
+  <span class="key">"reviews"</span>: [
+    {
+      <span class="key">"reviewer"</span>: <span class="string">"Reviewer 1"</span>,
+      <span class="key">"comments"</span>: [ ... ]
+    },
+    {
+      <span class="key">"reviewer"</span>: <span class="string">"Reviewer 2"</span>,
+      <span class="key">"comments"</span>: [ ... ]
+    },
+    {
+      <span class="key">"reviewer"</span>: <span class="string">"Editor"</span>,
+      <span class="key">"comments"</span>: [ ... ]
+    }
+  ]
+}
+                </div>
+            </div>
+
+            <h2>Validation</h2>
+            <p>Rebuttr validates JSON on import. Common validation errors:</p>
+
+            <table class="schema-table">
+                <tr>
+                    <th>Error</th>
+                    <th>Cause</th>
+                    <th>Solution</th>
+                </tr>
+                <tr>
+                    <td>Missing required field</td>
+                    <td>Required field not provided</td>
+                    <td>Add the missing field</td>
+                </tr>
+                <tr>
+                    <td>Invalid category</td>
+                    <td>Category not in allowed list</td>
+                    <td>Use: major, minor, technical, editorial</td>
+                </tr>
+                <tr>
+                    <td>Invalid status</td>
+                    <td>Status not in allowed list</td>
+                    <td>Use: pending, inprogress, completed</td>
+                </tr>
+                <tr>
+                    <td>Invalid date format</td>
+                    <td>Date not ISO 8601</td>
+                    <td>Use format: 2024-01-15T10:30:00Z</td>
+                </tr>
+            </table>
+
+            <div class="alert alert-success">
+                <h5><i class="fas fa-check-circle"></i> JSON Validation</h5>
+                <p>Use <code>rebuttr validate --file data.json</code> to check your JSON before importing.</p>
+            </div>
+
+            <h2>Next Steps</h2>
+            <ul>
+                <li><a href="importing.html">Importing Reviews</a> - How to import data</li>
+                <li><a href="exporting.html">Exporting</a> - Export options and formats</li>
+                <li><a href="cli-reference.html">CLI Reference</a> - Command-line import/export</li>
+            </ul>
+        </main>
+    </div>
+
+    <footer>
+        <p>
+            <a href="index.html">Documentation</a> |
+            <a href="https://github.com/genomewalker/rebuttr">GitHub</a> |
+            <a href="troubleshooting.html">Troubleshooting</a>
+        </p>
+    </footer>
+
+    <script>
+        // Copy buttons
+        document.querySelectorAll('.copy-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const code = btn.closest('.code-block').querySelector('.code-content').textContent;
+                navigator.clipboard.writeText(code.trim());
+                btn.innerHTML = '<i class="fas fa-check"></i>';
+                setTimeout(() => btn.innerHTML = '<i class="far fa-copy"></i>', 2000);
+            });
+        });
+    </script>
+</body>
+</html>

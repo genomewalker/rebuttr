@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Paper Management - Rebuttr Documentation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --primary: #4F46E5;
+            --secondary: #10B981;
+            --dark: #1F2937;
+            --darker: #111827;
+            --light: #F9FAFB;
+            --muted: #6B7280;
+            --border: #E5E7EB;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.7;
+            color: var(--dark);
+            background: var(--light);
+        }
+        header {
+            background: white;
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--dark);
+            text-decoration: none;
+        }
+        .logo img { width: 32px; }
+        nav a {
+            color: var(--muted);
+            text-decoration: none;
+            margin-left: 2rem;
+            font-weight: 500;
+        }
+        nav a:hover { color: var(--primary); }
+        .doc-layout {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            max-width: 1200px;
+            margin: 0 auto;
+            min-height: calc(100vh - 65px);
+        }
+        .sidebar {
+            background: white;
+            border-right: 1px solid var(--border);
+            padding: 2rem 1.5rem;
+            position: sticky;
+            top: 65px;
+            height: calc(100vh - 65px);
+            overflow-y: auto;
+        }
+        .sidebar h4 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--muted);
+            margin-bottom: 0.75rem;
+            margin-top: 1.5rem;
+        }
+        .sidebar h4:first-child { margin-top: 0; }
+        .sidebar a {
+            display: block;
+            padding: 0.5rem 0;
+            color: var(--dark);
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        .sidebar a:hover { color: var(--primary); }
+        .sidebar a.active {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        .content {
+            padding: 3rem;
+            max-width: 800px;
+        }
+        .content h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        .content .subtitle {
+            font-size: 1.25rem;
+            color: var(--muted);
+            margin-bottom: 2rem;
+        }
+        .content h2 {
+            font-size: 1.5rem;
+            margin: 2.5rem 0 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+        .content h3 {
+            font-size: 1.2rem;
+            margin: 1.5rem 0 0.75rem;
+        }
+        .content p {
+            margin-bottom: 1rem;
+        }
+        .content ul, .content ol {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .content li { margin-bottom: 0.5rem; }
+        .content code {
+            background: #E5E7EB;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+        }
+        .code-block {
+            background: var(--darker);
+            border-radius: 8px;
+            margin: 1rem 0;
+            overflow: hidden;
+        }
+        .code-header {
+            background: #374151;
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+            color: #9CA3AF;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .code-content {
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: #E5E7EB;
+            overflow-x: auto;
+        }
+        .code-content .comment { color: #6B7280; }
+        .copy-btn {
+            background: transparent;
+            border: none;
+            color: #9CA3AF;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+        }
+        .copy-btn:hover { color: white; }
+        .alert {
+            padding: 1rem 1.25rem;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+        }
+        .alert-info {
+            background: #EEF2FF;
+            border-left: 4px solid var(--primary);
+        }
+        .alert-success {
+            background: #ECFDF5;
+            border-left: 4px solid var(--secondary);
+        }
+        .alert-warning {
+            background: #FFFBEB;
+            border-left: 4px solid #F59E0B;
+        }
+        .alert h5 {
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .alert p { margin: 0; font-size: 0.95rem; }
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        .status-draft { background: #FEF3C7; color: #92400E; }
+        .status-inprogress { background: #DBEAFE; color: #1E40AF; }
+        .status-completed { background: #D1FAE5; color: #065F46; }
+        .status-submitted { background: #E0E7FF; color: #3730A3; }
+        .workflow-diagram {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            text-align: center;
+        }
+        .workflow-step {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            background: var(--light);
+            border-radius: 6px;
+            margin: 0.25rem;
+            font-size: 0.9rem;
+        }
+        .workflow-arrow {
+            color: var(--muted);
+            margin: 0 0.5rem;
+        }
+        .requirements-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        .requirements-table th, .requirements-table td {
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border);
+            text-align: left;
+        }
+        .requirements-table th {
+            background: #F3F4F6;
+            font-weight: 600;
+        }
+        footer {
+            margin-top: 4rem;
+            padding: 2rem;
+            text-align: center;
+            color: var(--muted);
+            border-top: 1px solid var(--border);
+        }
+        footer a { color: var(--primary); text-decoration: none; }
+        @media (max-width: 768px) {
+            .doc-layout { grid-template-columns: 1fr; }
+            .sidebar { display: none; }
+            .content { padding: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <a href="../index.html" class="logo">
+                <img src="../assets/logo.svg" alt="Rebuttr">
+                Rebuttr Docs
+            </a>
+            <nav>
+                <a href="../index.html">Home</a>
+                <a href="../tutorial.html">Tutorial</a>
+                <a href="https://github.com/genomewalker/rebuttr">GitHub</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="doc-layout">
+        <aside class="sidebar">
+            <h4>Getting Started</h4>
+            <a href="installation.html">Installation</a>
+            <a href="quickstart.html">Quick Start</a>
+            <a href="../tutorial.html">Tutorial</a>
+
+            <h4>User Guide</h4>
+            <a href="importing.html">Importing Reviews</a>
+            <a href="ai-features.html">AI Features</a>
+            <a href="exporting.html">Exporting</a>
+            <a href="multi-paper.html" class="active">Multi-Paper</a>
+
+            <h4>Configuration</h4>
+            <a href="configuration.html">Configuration</a>
+            <a href="cli-reference.html">CLI Reference</a>
+            <a href="skills.html">AI Skills</a>
+
+            <h4>Reference</h4>
+            <a href="../api/">API Reference</a>
+            <a href="json-format.html">JSON Format</a>
+            <a href="troubleshooting.html">Troubleshooting</a>
+        </aside>
+
+        <main class="content">
+            <h1>Multi-Paper Management</h1>
+            <p class="subtitle">Organize and manage multiple papers, revision rounds, and submission workflows.</p>
+
+            <h2>Overview</h2>
+            <p>Rebuttr is designed to handle multiple papers simultaneously, whether you're responding to reviews for several manuscripts or tracking multiple revision rounds for a single paper.</p>
+
+            <h2>Paper Status</h2>
+            <p>Each paper has a status that helps you track its progress:</p>
+
+            <table class="requirements-table">
+                <tr>
+                    <th>Status</th>
+                    <th>Description</th>
+                </tr>
+                <tr>
+                    <td><span class="status-badge status-draft">Draft</span></td>
+                    <td>Paper created, no reviews imported yet</td>
+                </tr>
+                <tr>
+                    <td><span class="status-badge status-inprogress">In Progress</span></td>
+                    <td>Reviews imported, responses being drafted</td>
+                </tr>
+                <tr>
+                    <td><span class="status-badge status-completed">Completed</span></td>
+                    <td>All comments have responses</td>
+                </tr>
+                <tr>
+                    <td><span class="status-badge status-submitted">Submitted</span></td>
+                    <td>Rebuttal exported and submitted to journal</td>
+                </tr>
+            </table>
+
+            <h2>Dashboard View</h2>
+            <p>The dashboard shows all your papers with key information:</p>
+            <ul>
+                <li>Paper title and journal</li>
+                <li>Current status</li>
+                <li>Progress (responses completed / total comments)</li>
+                <li>Last modified date</li>
+                <li>Quick actions</li>
+            </ul>
+
+            <h3>Filtering and Sorting</h3>
+            <p>Use the filter controls to find papers quickly:</p>
+            <ul>
+                <li><strong>By status:</strong> Show only papers at a specific stage</li>
+                <li><strong>By journal:</strong> Group papers by target journal</li>
+                <li><strong>By date:</strong> Sort by creation or last modified date</li>
+                <li><strong>Search:</strong> Find papers by title or author</li>
+            </ul>
+
+            <h2>Revision Rounds</h2>
+            <p>Track multiple rounds of revision for the same paper:</p>
+
+            <div class="workflow-diagram">
+                <span class="workflow-step">Round 1</span>
+                <span class="workflow-arrow">→</span>
+                <span class="workflow-step">Round 2</span>
+                <span class="workflow-arrow">→</span>
+                <span class="workflow-step">Round 3</span>
+                <span class="workflow-arrow">→</span>
+                <span class="workflow-step">Accepted</span>
+            </div>
+
+            <h3>Creating a New Round</h3>
+            <ol>
+                <li>Open your existing paper</li>
+                <li>Click <strong>"New Revision Round"</strong></li>
+                <li>The previous round is archived</li>
+                <li>Import new reviewer comments</li>
+                <li>Previous responses are available for reference</li>
+            </ol>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span>Terminal</span>
+                    <button class="copy-btn"><i class="far fa-copy"></i></button>
+                </div>
+                <div class="code-content">
+<span class="comment"># Create new revision round via CLI</span>
+rebuttr round new --paper "My Paper"
+
+<span class="comment"># List all rounds for a paper</span>
+rebuttr round list --paper "My Paper"
+
+<span class="comment"># Switch to a specific round</span>
+rebuttr round switch --paper "My Paper" --round 2
+                </div>
+            </div>
+
+            <div class="alert alert-info">
+                <h5><i class="fas fa-info-circle"></i> Round History</h5>
+                <p>All revision rounds are preserved. You can reference previous rounds when drafting new responses, which is helpful when reviewers ask about changes made in earlier revisions.</p>
+            </div>
+
+            <h2>Organizing Papers</h2>
+
+            <h3>Tags</h3>
+            <p>Add tags to categorize your papers:</p>
+            <ul>
+                <li>By project or grant</li>
+                <li>By collaborators</li>
+                <li>By priority or deadline</li>
+                <li>By topic or field</li>
+            </ul>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span>Terminal</span>
+                    <button class="copy-btn"><i class="far fa-copy"></i></button>
+                </div>
+                <div class="code-content">
+<span class="comment"># Add tags to a paper</span>
+rebuttr tag add --paper "My Paper" --tags "priority,grant-123"
+
+<span class="comment"># List papers by tag</span>
+rebuttr list --tag "priority"
+
+<span class="comment"># Remove a tag</span>
+rebuttr tag remove --paper "My Paper" --tag "draft"
+                </div>
+            </div>
+
+            <h3>Archives</h3>
+            <p>Archive completed or abandoned papers to keep your dashboard clean:</p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span>Terminal</span>
+                    <button class="copy-btn"><i class="far fa-copy"></i></button>
+                </div>
+                <div class="code-content">
+<span class="comment"># Archive a paper</span>
+rebuttr archive --paper "Old Paper"
+
+<span class="comment"># List archived papers</span>
+rebuttr list --archived
+
+<span class="comment"># Unarchive a paper</span>
+rebuttr unarchive --paper "Old Paper"
+                </div>
+            </div>
+
+            <h2>Bulk Operations</h2>
+            <p>Perform operations on multiple papers at once:</p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span>Terminal</span>
+                    <button class="copy-btn"><i class="far fa-copy"></i></button>
+                </div>
+                <div class="code-content">
+<span class="comment"># Export all completed papers</span>
+rebuttr export --all --status completed --format docx --output-dir ./rebuttals/
+
+<span class="comment"># Archive all submitted papers</span>
+rebuttr archive --status submitted
+
+<span class="comment"># Backup all papers</span>
+rebuttr export --all --format json --output-dir ./backup/
+                </div>
+            </div>
+
+            <h2>Data Storage</h2>
+            <p>All paper data is stored locally:</p>
+
+            <table class="requirements-table">
+                <tr>
+                    <th>Location</th>
+                    <th>Contents</th>
+                </tr>
+                <tr>
+                    <td><code>~/Rebuttr/papers/</code></td>
+                    <td>Paper data and reviews</td>
+                </tr>
+                <tr>
+                    <td><code>~/Rebuttr/exports/</code></td>
+                    <td>Generated export files</td>
+                </tr>
+                <tr>
+                    <td><code>~/Rebuttr/backups/</code></td>
+                    <td>Automatic backups</td>
+                </tr>
+                <tr>
+                    <td><code>~/Rebuttr/rebuttr.db</code></td>
+                    <td>SQLite database</td>
+                </tr>
+            </table>
+
+            <h2>Collaboration</h2>
+            <p>Share paper data with collaborators:</p>
+
+            <h3>Export and Import</h3>
+            <ol>
+                <li>Export the paper as JSON: <code>rebuttr export --paper "My Paper" --format json</code></li>
+                <li>Share the JSON file with your collaborator</li>
+                <li>They import it: <code>rebuttr import --file paper.json</code></li>
+            </ol>
+
+            <div class="alert alert-warning">
+                <h5><i class="fas fa-exclamation-triangle"></i> Sync Limitations</h5>
+                <p>Rebuttr doesn't have real-time sync. For collaborative editing, export/import JSON files or consider using shared cloud storage for your Rebuttr data directory.</p>
+            </div>
+
+            <h2>Best Practices</h2>
+            <ul>
+                <li><strong>Use consistent naming:</strong> Include journal abbreviation in paper titles</li>
+                <li><strong>Update status:</strong> Keep paper status current for accurate dashboard views</li>
+                <li><strong>Tag strategically:</strong> Use tags that help you filter when busy</li>
+                <li><strong>Archive regularly:</strong> Keep your active paper list manageable</li>
+                <li><strong>Backup frequently:</strong> Export to JSON before major changes</li>
+            </ul>
+
+            <h2>Next Steps</h2>
+            <ul>
+                <li><a href="exporting.html">Exporting</a> - Export options for collaboration</li>
+                <li><a href="cli-reference.html">CLI Reference</a> - All management commands</li>
+                <li><a href="json-format.html">JSON Format</a> - Data format for sharing</li>
+            </ul>
+        </main>
+    </div>
+
+    <footer>
+        <p>
+            <a href="index.html">Documentation</a> |
+            <a href="https://github.com/genomewalker/rebuttr">GitHub</a> |
+            <a href="troubleshooting.html">Troubleshooting</a>
+        </p>
+    </footer>
+
+    <script>
+        // Copy buttons
+        document.querySelectorAll('.copy-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const code = btn.closest('.code-block').querySelector('.code-content').textContent;
+                navigator.clipboard.writeText(code.trim());
+                btn.innerHTML = '<i class="fas fa-check"></i>';
+                setTimeout(() => btn.innerHTML = '<i class="far fa-copy"></i>', 2000);
+            });
+        });
+    </script>
+</body>
+</html>

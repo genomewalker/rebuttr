@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Skills - Rebuttr Documentation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --primary: #4F46E5;
+            --secondary: #10B981;
+            --dark: #1F2937;
+            --darker: #111827;
+            --light: #F9FAFB;
+            --muted: #6B7280;
+            --border: #E5E7EB;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.7;
+            color: var(--dark);
+            background: var(--light);
+        }
+        header {
+            background: white;
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--dark);
+            text-decoration: none;
+        }
+        .logo img { width: 32px; }
+        nav a {
+            color: var(--muted);
+            text-decoration: none;
+            margin-left: 2rem;
+            font-weight: 500;
+        }
+        nav a:hover { color: var(--primary); }
+        .doc-layout {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            max-width: 1200px;
+            margin: 0 auto;
+            min-height: calc(100vh - 65px);
+        }
+        .sidebar {
+            background: white;
+            border-right: 1px solid var(--border);
+            padding: 2rem 1.5rem;
+            position: sticky;
+            top: 65px;
+            height: calc(100vh - 65px);
+            overflow-y: auto;
+        }
+        .sidebar h4 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--muted);
+            margin-bottom: 0.75rem;
+            margin-top: 1.5rem;
+        }
+        .sidebar h4:first-child { margin-top: 0; }
+        .sidebar a {
+            display: block;
+            padding: 0.5rem 0;
+            color: var(--dark);
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        .sidebar a:hover { color: var(--primary); }
+        .sidebar a.active {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        .content {
+            padding: 3rem;
+            max-width: 800px;
+        }
+        .content h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        .content .subtitle {
+            font-size: 1.25rem;
+            color: var(--muted);
+            margin-bottom: 2rem;
+        }
+        .content h2 {
+            font-size: 1.5rem;
+            margin: 2.5rem 0 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+        .content h3 {
+            font-size: 1.2rem;
+            margin: 1.5rem 0 0.75rem;
+        }
+        .content p {
+            margin-bottom: 1rem;
+        }
+        .content ul, .content ol {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .content li { margin-bottom: 0.5rem; }
+        .content code {
+            background: #E5E7EB;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+        }
+        .code-block {
+            background: var(--darker);
+            border-radius: 8px;
+            margin: 1rem 0;
+            overflow: hidden;
+        }
+        .code-header {
+            background: #374151;
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+            color: #9CA3AF;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .code-content {
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: #E5E7EB;
+            overflow-x: auto;
+        }
+        .code-content .comment { color: #6B7280; }
+        .code-content .string { color: #A5D6FF; }
+        .code-content .key { color: #7EE787; }
+        .copy-btn {
+            background: transparent;
+            border: none;
+            color: #9CA3AF;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+        }
+        .copy-btn:hover { color: white; }
+        .alert {
+            padding: 1rem 1.25rem;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+        }
+        .alert-info {
+            background: #EEF2FF;
+            border-left: 4px solid var(--primary);
+        }
+        .alert-success {
+            background: #ECFDF5;
+            border-left: 4px solid var(--secondary);
+        }
+        .alert-warning {
+            background: #FFFBEB;
+            border-left: 4px solid #F59E0B;
+        }
+        .alert h5 {
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .alert p { margin: 0; font-size: 0.95rem; }
+        .skill-card {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            background: white;
+        }
+        .skill-card h4 {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+            color: var(--dark);
+        }
+        .skill-card h4 .icon {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--primary), #7C3AED);
+            color: white;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        .skill-card .filename {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--muted);
+            margin-bottom: 0.75rem;
+        }
+        .skill-card p {
+            color: var(--muted);
+            margin-bottom: 0;
+        }
+        .requirements-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        .requirements-table th, .requirements-table td {
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border);
+            text-align: left;
+        }
+        .requirements-table th {
+            background: #F3F4F6;
+            font-weight: 600;
+        }
+        footer {
+            margin-top: 4rem;
+            padding: 2rem;
+            text-align: center;
+            color: var(--muted);
+            border-top: 1px solid var(--border);
+        }
+        footer a { color: var(--primary); text-decoration: none; }
+        @media (max-width: 768px) {
+            .doc-layout { grid-template-columns: 1fr; }
+            .sidebar { display: none; }
+            .content { padding: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <a href="../index.html" class="logo">
+                <img src="../assets/logo.svg" alt="Rebuttr">
+                Rebuttr Docs
+            </a>
+            <nav>
+                <a href="../index.html">Home</a>
+                <a href="../tutorial.html">Tutorial</a>
+                <a href="https://github.com/genomewalker/rebuttr">GitHub</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="doc-layout">
+        <aside class="sidebar">
+            <h4>Getting Started</h4>
+            <a href="installation.html">Installation</a>
+            <a href="quickstart.html">Quick Start</a>
+            <a href="../tutorial.html">Tutorial</a>
+
+            <h4>User Guide</h4>
+            <a href="importing.html">Importing Reviews</a>
+            <a href="ai-features.html">AI Features</a>
+            <a href="exporting.html">Exporting</a>
+            <a href="multi-paper.html">Multi-Paper</a>
+
+            <h4>Configuration</h4>
+            <a href="configuration.html">Configuration</a>
+            <a href="cli-reference.html">CLI Reference</a>
+            <a href="skills.html" class="active">AI Skills</a>
+
+            <h4>Reference</h4>
+            <a href="../api/">API Reference</a>
+            <a href="json-format.html">JSON Format</a>
+            <a href="troubleshooting.html">Troubleshooting</a>
+        </aside>
+
+        <main class="content">
+            <h1>AI Skills</h1>
+            <p class="subtitle">Configure and customize the AI expert panel behavior for generating responses.</p>
+
+            <h2>Overview</h2>
+            <p>Rebuttr uses OpenCode skills to define AI expert behaviors. Skills are configuration files that tell the AI how to analyze reviewer comments and generate appropriate responses. Each expert in the panel is defined by a skill file.</p>
+
+            <h2>Default Skills</h2>
+            <p>Rebuttr installs the following skills during setup:</p>
+
+            <div class="skill-card">
+                <h4>
+                    <span class="icon"><i class="fas fa-microscope"></i></span>
+                    Domain Expert
+                </h4>
+                <div class="filename">~/.config/opencode/skill/rebuttr-domain-expert.md</div>
+                <p>Analyzes comments for scientific accuracy, methodology concerns, and technical correctness. Provides domain-specific insights for crafting accurate responses.</p>
+            </div>
+
+            <div class="skill-card">
+                <h4>
+                    <span class="icon"><i class="fas fa-edit"></i></span>
+                    Writing Specialist
+                </h4>
+                <div class="filename">~/.config/opencode/skill/rebuttr-writing-specialist.md</div>
+                <p>Focuses on clarity, academic tone, and effective communication. Ensures responses are well-structured and professionally written.</p>
+            </div>
+
+            <div class="skill-card">
+                <h4>
+                    <span class="icon"><i class="fas fa-user-tie"></i></span>
+                    Reviewer Perspective
+                </h4>
+                <div class="filename">~/.config/opencode/skill/rebuttr-reviewer-perspective.md</div>
+                <p>Considers what reviewers and editors expect to see in a response. Helps anticipate follow-up questions and concerns.</p>
+            </div>
+
+            <div class="skill-card">
+                <h4>
+                    <span class="icon"><i class="fas fa-chess"></i></span>
+                    Response Strategist
+                </h4>
+                <div class="filename">~/.config/opencode/skill/rebuttr-strategist.md</div>
+                <p>Advises on diplomatic approaches, tone, and strategy for addressing sensitive or critical feedback.</p>
+            </div>
+
+            <h2>Skill File Structure</h2>
+            <p>Skills are Markdown files with a specific structure:</p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span>~/.config/opencode/skill/rebuttr-domain-expert.md</span>
+                    <button class="copy-btn"><i class="far fa-copy"></i></button>
+                </div>
+                <div class="code-content">
+# Domain Expert
+
+You are a domain expert helping researchers respond to peer review.
+
+## Your Role
+
+Analyze reviewer comments for:
+- Scientific accuracy concerns
+- Methodology questions
+- Data interpretation issues
+- Literature gaps
+
+## Response Guidelines
+
+1. Identify the core scientific question
+2. Assess if the concern is valid
+3. Suggest specific evidence or analysis to address it
+4. Recommend manuscript changes if needed
+
+## Tone
+
+- Objective and evidence-based
+- Acknowledge valid criticism
+- Defend work when appropriate with evidence
+                </div>
+            </div>
+
+            <h2>Creating Custom Skills</h2>
+            <p>Create your own skills to customize AI behavior for your field or preferences:</p>
+
+            <h3>Step 1: Create the Skill File</h3>
+            <div class="code-block">
+                <div class="code-header">
+                    <span>Terminal</span>
+                    <button class="copy-btn"><i class="far fa-copy"></i></button>
+                </div>
+                <div class="code-content">
+<span class="comment"># Create a new skill file</span>
+touch ~/.config/opencode/skill/rebuttr-my-expert.md
+                </div>
+            </div>
+
+            <h3>Step 2: Define the Skill</h3>
+            <div class="code-block">
+                <div class="code-header">
+                    <span>~/.config/opencode/skill/rebuttr-my-expert.md</span>
+                    <button class="copy-btn"><i class="far fa-copy"></i></button>
+                </div>
+                <div class="code-content">
+# Bioinformatics Expert
+
+You are a bioinformatics expert specializing in genomics
+and computational biology.
+
+## Your Expertise
+
+- Sequence analysis and alignment
+- Statistical methods for genomics
+- Pipeline development
+- Reproducibility in computational research
+
+## When Reviewing Comments
+
+1. Check if computational methods are correctly described
+2. Verify statistical approaches are appropriate
+3. Suggest additional analyses if helpful
+4. Recommend ways to improve reproducibility
+
+## Response Style
+
+- Technical but accessible
+- Include specific tool/method recommendations
+- Reference relevant benchmarks or standards
+                </div>
+            </div>
+
+            <h3>Step 3: Register the Skill</h3>
+            <p>Add your skill to the Rebuttr configuration:</p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span>~/.config/rebuttr/config.json</span>
+                    <button class="copy-btn"><i class="far fa-copy"></i></button>
+                </div>
+                <div class="code-content">
+{
+  <span class="key">"ai"</span>: {
+    <span class="key">"expertPanel"</span>: [
+      <span class="string">"rebuttr-domain-expert"</span>,
+      <span class="string">"rebuttr-writing-specialist"</span>,
+      <span class="string">"rebuttr-reviewer-perspective"</span>,
+      <span class="string">"rebuttr-my-expert"</span>
+    ]
+  }
+}
+                </div>
+            </div>
+
+            <h2>Skill Configuration Options</h2>
+            <p>Configure how skills are used in <code>~/.config/rebuttr/config.json</code>:</p>
+
+            <table class="requirements-table">
+                <tr>
+                    <th>Option</th>
+                    <th>Description</th>
+                    <th>Default</th>
+                </tr>
+                <tr>
+                    <td><code>ai.expertPanel</code></td>
+                    <td>Array of skill names to use</td>
+                    <td>All default skills</td>
+                </tr>
+                <tr>
+                    <td><code>ai.expertPanelSize</code></td>
+                    <td>Maximum experts per comment</td>
+                    <td>4</td>
+                </tr>
+                <tr>
+                    <td><code>ai.skillDirectory</code></td>
+                    <td>Custom skill directory path</td>
+                    <td>~/.config/opencode/skill/</td>
+                </tr>
+                <tr>
+                    <td><code>ai.parallelExperts</code></td>
+                    <td>Run experts in parallel</td>
+                    <td>true</td>
+                </tr>
+            </table>
+
+            <h2>Field-Specific Skills</h2>
+            <p>Consider creating skills tailored to your research area:</p>
+
+            <ul>
+                <li><strong>Clinical research:</strong> Focus on patient safety, ethics, and clinical significance</li>
+                <li><strong>Machine learning:</strong> Emphasize reproducibility, benchmarks, and fair comparisons</li>
+                <li><strong>Social sciences:</strong> Address validity, generalizability, and theoretical frameworks</li>
+                <li><strong>Environmental science:</strong> Consider ecological implications and uncertainty</li>
+            </ul>
+
+            <div class="alert alert-success">
+                <h5><i class="fas fa-lightbulb"></i> Pro Tip</h5>
+                <p>Share useful custom skills with your research group or lab. A shared skill directory can ensure consistent response quality across team members.</p>
+            </div>
+
+            <h2>Disabling Skills</h2>
+            <p>To disable specific skills or use fewer experts:</p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span>~/.config/rebuttr/config.json</span>
+                    <button class="copy-btn"><i class="far fa-copy"></i></button>
+                </div>
+                <div class="code-content">
+{
+  <span class="key">"ai"</span>: {
+    <span class="key">"expertPanel"</span>: [
+      <span class="string">"rebuttr-domain-expert"</span>,
+      <span class="string">"rebuttr-writing-specialist"</span>
+    ],
+    <span class="key">"expertPanelSize"</span>: 2
+  }
+}
+                </div>
+            </div>
+
+            <h2>Debugging Skills</h2>
+            <p>To see how skills are being used:</p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span>Terminal</span>
+                    <button class="copy-btn"><i class="far fa-copy"></i></button>
+                </div>
+                <div class="code-content">
+<span class="comment"># Enable verbose mode to see expert outputs</span>
+rebuttr generate --paper "My Paper" --comment 1 --verbose
+
+<span class="comment"># List available skills</span>
+ls ~/.config/opencode/skill/ | grep rebuttr
+                </div>
+            </div>
+
+            <div class="alert alert-warning">
+                <h5><i class="fas fa-exclamation-triangle"></i> Skill Syntax</h5>
+                <p>Skills must be valid Markdown files. Syntax errors may cause AI generation to fail. Test new skills on a single comment before using them broadly.</p>
+            </div>
+
+            <h2>Next Steps</h2>
+            <ul>
+                <li><a href="ai-features.html">AI Features</a> - How the expert panel works</li>
+                <li><a href="configuration.html">Configuration</a> - All configuration options</li>
+                <li><a href="cli-reference.html">CLI Reference</a> - Command-line options</li>
+            </ul>
+        </main>
+    </div>
+
+    <footer>
+        <p>
+            <a href="index.html">Documentation</a> |
+            <a href="https://github.com/genomewalker/rebuttr">GitHub</a> |
+            <a href="troubleshooting.html">Troubleshooting</a>
+        </p>
+    </footer>
+
+    <script>
+        // Copy buttons
+        document.querySelectorAll('.copy-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const code = btn.closest('.code-block').querySelector('.code-content').textContent;
+                navigator.clipboard.writeText(code.trim());
+                btn.innerHTML = '<i class="fas fa-check"></i>';
+                setTimeout(() => btn.innerHTML = '<i class="far fa-copy"></i>', 2000);
+            });
+        });
+    </script>
+</body>
+</html>

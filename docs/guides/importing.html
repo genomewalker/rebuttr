@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Importing Reviews - Rebuttr Documentation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --primary: #4F46E5;
+            --secondary: #10B981;
+            --dark: #1F2937;
+            --darker: #111827;
+            --light: #F9FAFB;
+            --muted: #6B7280;
+            --border: #E5E7EB;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.7;
+            color: var(--dark);
+            background: var(--light);
+        }
+        header {
+            background: white;
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--dark);
+            text-decoration: none;
+        }
+        .logo img { width: 32px; }
+        nav a {
+            color: var(--muted);
+            text-decoration: none;
+            margin-left: 2rem;
+            font-weight: 500;
+        }
+        nav a:hover { color: var(--primary); }
+        .doc-layout {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            max-width: 1200px;
+            margin: 0 auto;
+            min-height: calc(100vh - 65px);
+        }
+        .sidebar {
+            background: white;
+            border-right: 1px solid var(--border);
+            padding: 2rem 1.5rem;
+            position: sticky;
+            top: 65px;
+            height: calc(100vh - 65px);
+            overflow-y: auto;
+        }
+        .sidebar h4 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--muted);
+            margin-bottom: 0.75rem;
+            margin-top: 1.5rem;
+        }
+        .sidebar h4:first-child { margin-top: 0; }
+        .sidebar a {
+            display: block;
+            padding: 0.5rem 0;
+            color: var(--dark);
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        .sidebar a:hover { color: var(--primary); }
+        .sidebar a.active {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        .content {
+            padding: 3rem;
+            max-width: 800px;
+        }
+        .content h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        .content .subtitle {
+            font-size: 1.25rem;
+            color: var(--muted);
+            margin-bottom: 2rem;
+        }
+        .content h2 {
+            font-size: 1.5rem;
+            margin: 2.5rem 0 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+        .content h3 {
+            font-size: 1.2rem;
+            margin: 1.5rem 0 0.75rem;
+        }
+        .content p {
+            margin-bottom: 1rem;
+        }
+        .content ul, .content ol {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .content li { margin-bottom: 0.5rem; }
+        .content code {
+            background: #E5E7EB;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+        }
+        .code-block {
+            background: var(--darker);
+            border-radius: 8px;
+            margin: 1rem 0;
+            overflow: hidden;
+        }
+        .code-header {
+            background: #374151;
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+            color: #9CA3AF;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .code-content {
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: #E5E7EB;
+            overflow-x: auto;
+        }
+        .code-content .comment { color: #6B7280; }
+        .code-content .string { color: #A5D6FF; }
+        .code-content .key { color: #7EE787; }
+        .copy-btn {
+            background: transparent;
+            border: none;
+            color: #9CA3AF;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+        }
+        .copy-btn:hover { color: white; }
+        .alert {
+            padding: 1rem 1.25rem;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+        }
+        .alert-info {
+            background: #EEF2FF;
+            border-left: 4px solid var(--primary);
+        }
+        .alert-success {
+            background: #ECFDF5;
+            border-left: 4px solid var(--secondary);
+        }
+        .alert-warning {
+            background: #FFFBEB;
+            border-left: 4px solid #F59E0B;
+        }
+        .alert h5 {
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .alert p { margin: 0; font-size: 0.95rem; }
+        .format-card {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            background: white;
+        }
+        .format-card h4 {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+            color: var(--dark);
+        }
+        .format-card h4 i {
+            color: var(--primary);
+        }
+        .format-card p {
+            color: var(--muted);
+            margin-bottom: 0;
+        }
+        .format-card .extensions {
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+        }
+        .format-card .extensions code {
+            margin-right: 0.5rem;
+        }
+        .requirements-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        .requirements-table th, .requirements-table td {
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border);
+            text-align: left;
+        }
+        .requirements-table th {
+            background: #F3F4F6;
+            font-weight: 600;
+        }
+        footer {
+            margin-top: 4rem;
+            padding: 2rem;
+            text-align: center;
+            color: var(--muted);
+            border-top: 1px solid var(--border);
+        }
+        footer a { color: var(--primary); text-decoration: none; }
+        @media (max-width: 768px) {
+            .doc-layout { grid-template-columns: 1fr; }
+            .sidebar { display: none; }
+            .content { padding: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <a href="../index.html" class="logo">
+                <img src="../assets/logo.svg" alt="Rebuttr">
+                Rebuttr Docs
+            </a>
+            <nav>
+                <a href="../index.html">Home</a>
+                <a href="../tutorial.html">Tutorial</a>
+                <a href="https://github.com/genomewalker/rebuttr">GitHub</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="doc-layout">
+        <aside class="sidebar">
+            <h4>Getting Started</h4>
+            <a href="installation.html">Installation</a>
+            <a href="quickstart.html">Quick Start</a>
+            <a href="../tutorial.html">Tutorial</a>
+
+            <h4>User Guide</h4>
+            <a href="importing.html" class="active">Importing Reviews</a>
+            <a href="ai-features.html">AI Features</a>
+            <a href="exporting.html">Exporting</a>
+            <a href="multi-paper.html">Multi-Paper</a>
+
+            <h4>Configuration</h4>
+            <a href="configuration.html">Configuration</a>
+            <a href="cli-reference.html">CLI Reference</a>
+            <a href="skills.html">AI Skills</a>
+
+            <h4>Reference</h4>
+            <a href="../api/">API Reference</a>
+            <a href="json-format.html">JSON Format</a>
+            <a href="troubleshooting.html">Troubleshooting</a>
+        </aside>
+
+        <main class="content">
+            <h1>Importing Reviews</h1>
+            <p class="subtitle">Learn how to import peer review comments into Rebuttr from various formats.</p>
+
+            <h2>Supported Formats</h2>
+            <p>Rebuttr can import reviews from multiple file formats and sources:</p>
+
+            <div class="format-card">
+                <h4><i class="fas fa-file-pdf"></i> PDF Files</h4>
+                <p>Import reviews from PDF documents. Text is extracted automatically, including multi-column layouts.</p>
+                <div class="extensions"><code>.pdf</code></div>
+            </div>
+
+            <div class="format-card">
+                <h4><i class="fas fa-file-word"></i> Word Documents</h4>
+                <p>Import from Microsoft Word documents. Supports both modern and legacy formats.</p>
+                <div class="extensions"><code>.docx</code> <code>.doc</code></div>
+            </div>
+
+            <div class="format-card">
+                <h4><i class="fas fa-file-alt"></i> Plain Text</h4>
+                <p>Paste text directly or upload plain text files. Best for simple review formats.</p>
+                <div class="extensions"><code>.txt</code></div>
+            </div>
+
+            <div class="format-card">
+                <h4><i class="fas fa-code"></i> JSON</h4>
+                <p>Import structured data for programmatic workflows or migrations from other tools.</p>
+                <div class="extensions"><code>.json</code></div>
+            </div>
+
+            <h2>Importing via the Web Interface</h2>
+
+            <h3>Method 1: Paste Text</h3>
+            <p>The simplest way to import reviews:</p>
+            <ol>
+                <li>Navigate to your paper</li>
+                <li>Click <strong>"Add Review"</strong></li>
+                <li>Select the reviewer source (Reviewer 1, 2, 3, Editor, or AE)</li>
+                <li>Paste the review text into the text area</li>
+                <li>Click <strong>"Import"</strong></li>
+            </ol>
+
+            <h3>Method 2: File Upload</h3>
+            <p>Upload documents directly:</p>
+            <ol>
+                <li>Click <strong>"Add Review"</strong> then <strong>"Upload File"</strong></li>
+                <li>Drag and drop your file or click to browse</li>
+                <li>Rebuttr extracts the text automatically</li>
+                <li>Review the extracted text and adjust if needed</li>
+                <li>Click <strong>"Import"</strong></li>
+            </ol>
+
+            <div class="alert alert-info">
+                <h5><i class="fas fa-magic"></i> Smart Parsing</h5>
+                <p>Rebuttr uses AI to automatically split reviews into individual comments and categorize them by type (major, minor, technical, editorial).</p>
+            </div>
+
+            <h2>Importing via CLI</h2>
+            <p>Import reviews programmatically using the command line:</p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span>Terminal</span>
+                    <button class="copy-btn"><i class="far fa-copy"></i></button>
+                </div>
+                <div class="code-content">
+<span class="comment"># Import a PDF review</span>
+rebuttr import --paper "My Paper" --reviewer 1 --file review.pdf
+
+<span class="comment"># Import from text file</span>
+rebuttr import --paper "My Paper" --reviewer 2 --file review.txt
+
+<span class="comment"># Import JSON data</span>
+rebuttr import --paper "My Paper" --file reviews.json --format json
+                </div>
+            </div>
+
+            <h2>JSON Import Format</h2>
+            <p>For structured imports, use the following JSON format:</p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span>reviews.json</span>
+                    <button class="copy-btn"><i class="far fa-copy"></i></button>
+                </div>
+                <div class="code-content">
+{
+  <span class="key">"reviewer"</span>: <span class="string">"Reviewer 1"</span>,
+  <span class="key">"comments"</span>: [
+    {
+      <span class="key">"text"</span>: <span class="string">"The methodology section lacks detail..."</span>,
+      <span class="key">"category"</span>: <span class="string">"major"</span>,
+      <span class="key">"lineReference"</span>: <span class="string">"Lines 45-67"</span>
+    },
+    {
+      <span class="key">"text"</span>: <span class="string">"Consider adding a figure to illustrate..."</span>,
+      <span class="key">"category"</span>: <span class="string">"minor"</span>
+    }
+  ]
+}
+                </div>
+            </div>
+
+            <p>See the <a href="json-format.html">JSON Format Reference</a> for complete documentation.</p>
+
+            <h2>Comment Categories</h2>
+            <p>Rebuttr categorizes comments to help prioritize your responses:</p>
+
+            <table class="requirements-table">
+                <tr>
+                    <th>Category</th>
+                    <th>Description</th>
+                    <th>Typical Response</th>
+                </tr>
+                <tr>
+                    <td><strong>Major</strong></td>
+                    <td>Significant issues requiring substantial revision</td>
+                    <td>Detailed response with evidence of changes</td>
+                </tr>
+                <tr>
+                    <td><strong>Minor</strong></td>
+                    <td>Important but less critical suggestions</td>
+                    <td>Acknowledge and describe changes made</td>
+                </tr>
+                <tr>
+                    <td><strong>Technical</strong></td>
+                    <td>Methods, statistics, or technical details</td>
+                    <td>Clarify or provide additional detail</td>
+                </tr>
+                <tr>
+                    <td><strong>Editorial</strong></td>
+                    <td>Grammar, formatting, typos</td>
+                    <td>Brief acknowledgment of correction</td>
+                </tr>
+            </table>
+
+            <h2>Editing Imported Comments</h2>
+            <p>After import, you can refine the parsed comments:</p>
+            <ul>
+                <li><strong>Split comments:</strong> Click "Split" to divide a multi-part comment</li>
+                <li><strong>Merge comments:</strong> Select multiple comments and click "Merge"</li>
+                <li><strong>Re-categorize:</strong> Click the category badge to change it</li>
+                <li><strong>Edit text:</strong> Click on the comment text to make corrections</li>
+            </ul>
+
+            <div class="alert alert-warning">
+                <h5><i class="fas fa-exclamation-triangle"></i> PDF Quality</h5>
+                <p>PDF text extraction works best with native PDFs. Scanned documents may have extraction errors. Consider using OCR tools first if you have scanned reviews.</p>
+            </div>
+
+            <h2>Best Practices</h2>
+            <ul>
+                <li>Import all reviewers' comments before starting responses</li>
+                <li>Review the auto-categorization and adjust as needed</li>
+                <li>Use JSON import for complex or multi-round reviews</li>
+                <li>Keep original review documents for reference</li>
+            </ul>
+
+            <h2>Next Steps</h2>
+            <ul>
+                <li><a href="ai-features.html">AI Features</a> - Generate responses with AI assistance</li>
+                <li><a href="exporting.html">Exporting</a> - Create your rebuttal document</li>
+                <li><a href="json-format.html">JSON Format</a> - Full format specification</li>
+            </ul>
+        </main>
+    </div>
+
+    <footer>
+        <p>
+            <a href="index.html">Documentation</a> |
+            <a href="https://github.com/genomewalker/rebuttr">GitHub</a> |
+            <a href="troubleshooting.html">Troubleshooting</a>
+        </p>
+    </footer>
+
+    <script>
+        // Copy buttons
+        document.querySelectorAll('.copy-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const code = btn.closest('.code-block').querySelector('.code-content').textContent;
+                navigator.clipboard.writeText(code.trim());
+                btn.innerHTML = '<i class="fas fa-check"></i>';
+                setTimeout(() => btn.innerHTML = '<i class="far fa-copy"></i>', 2000);
+            });
+        });
+    </script>
+</body>
+</html>

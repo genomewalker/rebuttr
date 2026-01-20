@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CLI Reference - Rebuttr Documentation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --primary: #4F46E5;
+            --secondary: #10B981;
+            --dark: #1F2937;
+            --darker: #111827;
+            --light: #F9FAFB;
+            --muted: #6B7280;
+            --border: #E5E7EB;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.7;
+            color: var(--dark);
+            background: var(--light);
+        }
+        header {
+            background: white;
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--dark);
+            text-decoration: none;
+        }
+        .logo img { width: 32px; }
+        nav a {
+            color: var(--muted);
+            text-decoration: none;
+            margin-left: 2rem;
+            font-weight: 500;
+        }
+        nav a:hover { color: var(--primary); }
+        .doc-layout {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            max-width: 1200px;
+            margin: 0 auto;
+            min-height: calc(100vh - 65px);
+        }
+        .sidebar {
+            background: white;
+            border-right: 1px solid var(--border);
+            padding: 2rem 1.5rem;
+            position: sticky;
+            top: 65px;
+            height: calc(100vh - 65px);
+            overflow-y: auto;
+        }
+        .sidebar h4 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--muted);
+            margin-bottom: 0.75rem;
+            margin-top: 1.5rem;
+        }
+        .sidebar h4:first-child { margin-top: 0; }
+        .sidebar a {
+            display: block;
+            padding: 0.5rem 0;
+            color: var(--dark);
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        .sidebar a:hover { color: var(--primary); }
+        .sidebar a.active {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        .content {
+            padding: 3rem;
+            max-width: 800px;
+        }
+        .content h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        .content .subtitle {
+            font-size: 1.25rem;
+            color: var(--muted);
+            margin-bottom: 2rem;
+        }
+        .content h2 {
+            font-size: 1.5rem;
+            margin: 2.5rem 0 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+        .content h3 {
+            font-size: 1.2rem;
+            margin: 1.5rem 0 0.75rem;
+        }
+        .content p {
+            margin-bottom: 1rem;
+        }
+        .content ul, .content ol {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .content li { margin-bottom: 0.5rem; }
+        .content code {
+            background: #E5E7EB;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+        }
+        .code-block {
+            background: var(--darker);
+            border-radius: 8px;
+            margin: 1rem 0;
+            overflow: hidden;
+        }
+        .code-header {
+            background: #374151;
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+            color: #9CA3AF;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .code-content {
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: #E5E7EB;
+            overflow-x: auto;
+        }
+        .code-content .comment { color: #6B7280; }
+        .code-content .flag { color: #F472B6; }
+        .code-content .value { color: #A5D6FF; }
+        .copy-btn {
+            background: transparent;
+            border: none;
+            color: #9CA3AF;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+        }
+        .copy-btn:hover { color: white; }
+        .alert {
+            padding: 1rem 1.25rem;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+        }
+        .alert-info {
+            background: #EEF2FF;
+            border-left: 4px solid var(--primary);
+        }
+        .alert-success {
+            background: #ECFDF5;
+            border-left: 4px solid var(--secondary);
+        }
+        .alert-warning {
+            background: #FFFBEB;
+            border-left: 4px solid #F59E0B;
+        }
+        .alert h5 {
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .alert p { margin: 0; font-size: 0.95rem; }
+        .command-card {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin: 1rem 0;
+            background: white;
+            overflow: hidden;
+        }
+        .command-header {
+            background: #F3F4F6;
+            padding: 0.75rem 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+        }
+        .command-body {
+            padding: 1rem;
+        }
+        .command-body p {
+            margin-bottom: 0.75rem;
+        }
+        .command-body p:last-child {
+            margin-bottom: 0;
+        }
+        .option-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0.75rem 0;
+            font-size: 0.9rem;
+        }
+        .option-table th, .option-table td {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--border);
+            text-align: left;
+        }
+        .option-table th {
+            background: #F9FAFB;
+            font-weight: 600;
+        }
+        .option-table code {
+            font-size: 0.85em;
+        }
+        footer {
+            margin-top: 4rem;
+            padding: 2rem;
+            text-align: center;
+            color: var(--muted);
+            border-top: 1px solid var(--border);
+        }
+        footer a { color: var(--primary); text-decoration: none; }
+        @media (max-width: 768px) {
+            .doc-layout { grid-template-columns: 1fr; }
+            .sidebar { display: none; }
+            .content { padding: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <a href="../index.html" class="logo">
+                <img src="../assets/logo.svg" alt="Rebuttr">
+                Rebuttr Docs
+            </a>
+            <nav>
+                <a href="../index.html">Home</a>
+                <a href="../tutorial.html">Tutorial</a>
+                <a href="https://github.com/genomewalker/rebuttr">GitHub</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="doc-layout">
+        <aside class="sidebar">
+            <h4>Getting Started</h4>
+            <a href="installation.html">Installation</a>
+            <a href="quickstart.html">Quick Start</a>
+            <a href="../tutorial.html">Tutorial</a>
+
+            <h4>User Guide</h4>
+            <a href="importing.html">Importing Reviews</a>
+            <a href="ai-features.html">AI Features</a>
+            <a href="exporting.html">Exporting</a>
+            <a href="multi-paper.html">Multi-Paper</a>
+
+            <h4>Configuration</h4>
+            <a href="configuration.html">Configuration</a>
+            <a href="cli-reference.html" class="active">CLI Reference</a>
+            <a href="skills.html">AI Skills</a>
+
+            <h4>Reference</h4>
+            <a href="../api/">API Reference</a>
+            <a href="json-format.html">JSON Format</a>
+            <a href="troubleshooting.html">Troubleshooting</a>
+        </aside>
+
+        <main class="content">
+            <h1>CLI Reference</h1>
+            <p class="subtitle">Complete reference for all Rebuttr command-line interface commands and options.</p>
+
+            <h2>Global Options</h2>
+            <p>These options are available for all commands:</p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span>Terminal</span>
+                    <button class="copy-btn"><i class="far fa-copy"></i></button>
+                </div>
+                <div class="code-content">
+rebuttr [command] <span class="flag">--help</span>        <span class="comment"># Show help for a command</span>
+rebuttr [command] <span class="flag">--version</span>     <span class="comment"># Show version number</span>
+rebuttr [command] <span class="flag">--verbose</span>     <span class="comment"># Enable verbose output</span>
+rebuttr [command] <span class="flag">--quiet</span>       <span class="comment"># Suppress non-essential output</span>
+rebuttr [command] <span class="flag">--config</span> <span class="value">FILE</span> <span class="comment"># Use custom config file</span>
+                </div>
+            </div>
+
+            <h2>Core Commands</h2>
+
+            <div class="command-card">
+                <div class="command-header">rebuttr</div>
+                <div class="command-body">
+                    <p>Start the Rebuttr web interface. Opens your browser to the dashboard.</p>
+                    <table class="option-table">
+                        <tr>
+                            <th>Option</th>
+                            <th>Description</th>
+                            <th>Default</th>
+                        </tr>
+                        <tr>
+                            <td><code>--port, -p</code></td>
+                            <td>Port number for the web server</td>
+                            <td>3001</td>
+                        </tr>
+                        <tr>
+                            <td><code>--no-browser</code></td>
+                            <td>Don't open browser automatically</td>
+                            <td>false</td>
+                        </tr>
+                        <tr>
+                            <td><code>--host</code></td>
+                            <td>Host to bind to</td>
+                            <td>localhost</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="command-card">
+                <div class="command-header">rebuttr stop</div>
+                <div class="command-body">
+                    <p>Stop any running Rebuttr server processes.</p>
+                </div>
+            </div>
+
+            <h2>Paper Management</h2>
+
+            <div class="command-card">
+                <div class="command-header">rebuttr create</div>
+                <div class="command-body">
+                    <p>Create a new paper.</p>
+                    <table class="option-table">
+                        <tr>
+                            <th>Option</th>
+                            <th>Description</th>
+                            <th>Required</th>
+                        </tr>
+                        <tr>
+                            <td><code>--title, -t</code></td>
+                            <td>Paper title</td>
+                            <td>Yes</td>
+                        </tr>
+                        <tr>
+                            <td><code>--journal, -j</code></td>
+                            <td>Target journal name</td>
+                            <td>No</td>
+                        </tr>
+                        <tr>
+                            <td><code>--authors, -a</code></td>
+                            <td>Comma-separated author list</td>
+                            <td>No</td>
+                        </tr>
+                        <tr>
+                            <td><code>--tags</code></td>
+                            <td>Comma-separated tags</td>
+                            <td>No</td>
+                        </tr>
+                    </table>
+                    <div class="code-block">
+                        <div class="code-header"><span>Example</span></div>
+                        <div class="code-content">rebuttr create <span class="flag">--title</span> <span class="value">"My Research Paper"</span> <span class="flag">--journal</span> <span class="value">"Nature"</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="command-card">
+                <div class="command-header">rebuttr list</div>
+                <div class="command-body">
+                    <p>List all papers.</p>
+                    <table class="option-table">
+                        <tr>
+                            <th>Option</th>
+                            <th>Description</th>
+                        </tr>
+                        <tr>
+                            <td><code>--status</code></td>
+                            <td>Filter by status (draft, inprogress, completed, submitted)</td>
+                        </tr>
+                        <tr>
+                            <td><code>--tag</code></td>
+                            <td>Filter by tag</td>
+                        </tr>
+                        <tr>
+                            <td><code>--archived</code></td>
+                            <td>Include archived papers</td>
+                        </tr>
+                        <tr>
+                            <td><code>--format</code></td>
+                            <td>Output format (table, json, csv)</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="command-card">
+                <div class="command-header">rebuttr show</div>
+                <div class="command-body">
+                    <p>Show details for a specific paper.</p>
+                    <table class="option-table">
+                        <tr>
+                            <th>Option</th>
+                            <th>Description</th>
+                        </tr>
+                        <tr>
+                            <td><code>--paper, -p</code></td>
+                            <td>Paper title or ID</td>
+                        </tr>
+                        <tr>
+                            <td><code>--comments</code></td>
+                            <td>Include all comments</td>
+                        </tr>
+                        <tr>
+                            <td><code>--responses</code></td>
+                            <td>Include responses</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="command-card">
+                <div class="command-header">rebuttr delete</div>
+                <div class="command-body">
+                    <p>Delete a paper (moves to trash by default).</p>
+                    <table class="option-table">
+                        <tr>
+                            <th>Option</th>
+                            <th>Description</th>
+                        </tr>
+                        <tr>
+                            <td><code>--paper, -p</code></td>
+                            <td>Paper title or ID</td>
+                        </tr>
+                        <tr>
+                            <td><code>--permanent</code></td>
+                            <td>Permanently delete (bypass trash)</td>
+                        </tr>
+                        <tr>
+                            <td><code>--force, -f</code></td>
+                            <td>Skip confirmation prompt</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <h2>Import Commands</h2>
+
+            <div class="command-card">
+                <div class="command-header">rebuttr import</div>
+                <div class="command-body">
+                    <p>Import reviews from a file or stdin.</p>
+                    <table class="option-table">
+                        <tr>
+                            <th>Option</th>
+                            <th>Description</th>
+                            <th>Required</th>
+                        </tr>
+                        <tr>
+                            <td><code>--paper, -p</code></td>
+                            <td>Target paper title or ID</td>
+                            <td>Yes</td>
+                        </tr>
+                        <tr>
+                            <td><code>--file, -f</code></td>
+                            <td>Input file path</td>
+                            <td>Yes*</td>
+                        </tr>
+                        <tr>
+                            <td><code>--reviewer, -r</code></td>
+                            <td>Reviewer number (1, 2, 3) or "editor"</td>
+                            <td>No</td>
+                        </tr>
+                        <tr>
+                            <td><code>--format</code></td>
+                            <td>Input format (auto, pdf, docx, txt, json)</td>
+                            <td>No</td>
+                        </tr>
+                        <tr>
+                            <td><code>--stdin</code></td>
+                            <td>Read from stdin instead of file</td>
+                            <td>No</td>
+                        </tr>
+                    </table>
+                    <div class="code-block">
+                        <div class="code-header"><span>Examples</span></div>
+                        <div class="code-content">
+<span class="comment"># Import PDF</span>
+rebuttr import <span class="flag">-p</span> <span class="value">"My Paper"</span> <span class="flag">-f</span> <span class="value">review.pdf</span> <span class="flag">-r</span> <span class="value">1</span>
+
+<span class="comment"># Import from stdin</span>
+cat review.txt | rebuttr import <span class="flag">-p</span> <span class="value">"My Paper"</span> <span class="flag">--stdin</span>
+
+<span class="comment"># Import JSON with structure</span>
+rebuttr import <span class="flag">-p</span> <span class="value">"My Paper"</span> <span class="flag">-f</span> <span class="value">reviews.json</span> <span class="flag">--format</span> <span class="value">json</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <h2>Export Commands</h2>
+
+            <div class="command-card">
+                <div class="command-header">rebuttr export</div>
+                <div class="command-body">
+                    <p>Export a paper or rebuttal letter.</p>
+                    <table class="option-table">
+                        <tr>
+                            <th>Option</th>
+                            <th>Description</th>
+                            <th>Default</th>
+                        </tr>
+                        <tr>
+                            <td><code>--paper, -p</code></td>
+                            <td>Paper title or ID</td>
+                            <td>-</td>
+                        </tr>
+                        <tr>
+                            <td><code>--all</code></td>
+                            <td>Export all papers</td>
+                            <td>false</td>
+                        </tr>
+                        <tr>
+                            <td><code>--format, -f</code></td>
+                            <td>Output format (docx, json, md, pdf)</td>
+                            <td>docx</td>
+                        </tr>
+                        <tr>
+                            <td><code>--output, -o</code></td>
+                            <td>Output file path</td>
+                            <td>-</td>
+                        </tr>
+                        <tr>
+                            <td><code>--output-dir</code></td>
+                            <td>Output directory (for batch)</td>
+                            <td>./</td>
+                        </tr>
+                        <tr>
+                            <td><code>--reviewer</code></td>
+                            <td>Export specific reviewer only</td>
+                            <td>all</td>
+                        </tr>
+                        <tr>
+                            <td><code>--include-unanswered</code></td>
+                            <td>Include comments without responses</td>
+                            <td>false</td>
+                        </tr>
+                        <tr>
+                            <td><code>--template</code></td>
+                            <td>Custom Word template</td>
+                            <td>-</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <h2>AI Commands</h2>
+
+            <div class="command-card">
+                <div class="command-header">rebuttr generate</div>
+                <div class="command-body">
+                    <p>Generate AI responses for comments.</p>
+                    <table class="option-table">
+                        <tr>
+                            <th>Option</th>
+                            <th>Description</th>
+                        </tr>
+                        <tr>
+                            <td><code>--paper, -p</code></td>
+                            <td>Paper title or ID</td>
+                        </tr>
+                        <tr>
+                            <td><code>--comment, -c</code></td>
+                            <td>Specific comment ID</td>
+                        </tr>
+                        <tr>
+                            <td><code>--all</code></td>
+                            <td>Generate for all unanswered comments</td>
+                        </tr>
+                        <tr>
+                            <td><code>--reviewer</code></td>
+                            <td>Generate for specific reviewer only</td>
+                        </tr>
+                        <tr>
+                            <td><code>--category</code></td>
+                            <td>Generate for specific category (major, minor, etc.)</td>
+                        </tr>
+                        <tr>
+                            <td><code>--tone</code></td>
+                            <td>Response tone (professional, diplomatic, direct)</td>
+                        </tr>
+                        <tr>
+                            <td><code>--dry-run</code></td>
+                            <td>Preview without saving</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <h2>Revision Round Commands</h2>
+
+            <div class="command-card">
+                <div class="command-header">rebuttr round new</div>
+                <div class="command-body">
+                    <p>Create a new revision round for a paper.</p>
+                    <table class="option-table">
+                        <tr>
+                            <th>Option</th>
+                            <th>Description</th>
+                        </tr>
+                        <tr>
+                            <td><code>--paper, -p</code></td>
+                            <td>Paper title or ID</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="command-card">
+                <div class="command-header">rebuttr round list</div>
+                <div class="command-body">
+                    <p>List all revision rounds for a paper.</p>
+                </div>
+            </div>
+
+            <div class="command-card">
+                <div class="command-header">rebuttr round switch</div>
+                <div class="command-body">
+                    <p>Switch to a different revision round.</p>
+                    <table class="option-table">
+                        <tr>
+                            <th>Option</th>
+                            <th>Description</th>
+                        </tr>
+                        <tr>
+                            <td><code>--paper, -p</code></td>
+                            <td>Paper title or ID</td>
+                        </tr>
+                        <tr>
+                            <td><code>--round, -r</code></td>
+                            <td>Round number</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <h2>Utility Commands</h2>
+
+            <div class="command-card">
+                <div class="command-header">rebuttr archive</div>
+                <div class="command-body">
+                    <p>Archive one or more papers.</p>
+                    <table class="option-table">
+                        <tr>
+                            <th>Option</th>
+                            <th>Description</th>
+                        </tr>
+                        <tr>
+                            <td><code>--paper, -p</code></td>
+                            <td>Paper title or ID</td>
+                        </tr>
+                        <tr>
+                            <td><code>--status</code></td>
+                            <td>Archive all papers with this status</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="command-card">
+                <div class="command-header">rebuttr unarchive</div>
+                <div class="command-body">
+                    <p>Restore an archived paper.</p>
+                </div>
+            </div>
+
+            <div class="command-card">
+                <div class="command-header">rebuttr tag</div>
+                <div class="command-body">
+                    <p>Manage paper tags.</p>
+                    <div class="code-block">
+                        <div class="code-header"><span>Subcommands</span></div>
+                        <div class="code-content">
+rebuttr tag add <span class="flag">--paper</span> <span class="value">"Paper"</span> <span class="flag">--tags</span> <span class="value">"tag1,tag2"</span>
+rebuttr tag remove <span class="flag">--paper</span> <span class="value">"Paper"</span> <span class="flag">--tag</span> <span class="value">"tag1"</span>
+rebuttr tag list
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="command-card">
+                <div class="command-header">rebuttr config</div>
+                <div class="command-body">
+                    <p>View or modify configuration.</p>
+                    <div class="code-block">
+                        <div class="code-header"><span>Examples</span></div>
+                        <div class="code-content">
+rebuttr config get ai.model
+rebuttr config set ai.model <span class="value">"gpt-4"</span>
+rebuttr config list
+rebuttr config reset
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert alert-info">
+                <h5><i class="fas fa-info-circle"></i> Getting Help</h5>
+                <p>Run <code>rebuttr --help</code> for a list of all commands, or <code>rebuttr [command] --help</code> for detailed help on any command.</p>
+            </div>
+
+            <h2>Next Steps</h2>
+            <ul>
+                <li><a href="configuration.html">Configuration</a> - Configure Rebuttr settings</li>
+                <li><a href="skills.html">AI Skills</a> - Customize AI expert behavior</li>
+                <li><a href="json-format.html">JSON Format</a> - Data format reference</li>
+            </ul>
+        </main>
+    </div>
+
+    <footer>
+        <p>
+            <a href="index.html">Documentation</a> |
+            <a href="https://github.com/genomewalker/rebuttr">GitHub</a> |
+            <a href="troubleshooting.html">Troubleshooting</a>
+        </p>
+    </footer>
+
+    <script>
+        // Copy buttons
+        document.querySelectorAll('.copy-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const code = btn.closest('.code-block').querySelector('.code-content').textContent;
+                navigator.clipboard.writeText(code.trim());
+                btn.innerHTML = '<i class="fas fa-check"></i>';
+                setTimeout(() => btn.innerHTML = '<i class="far fa-copy"></i>', 2000);
+            });
+        });
+    </script>
+</body>
+</html>
