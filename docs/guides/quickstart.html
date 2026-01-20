@@ -5,243 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quick Start - Rebuttr Documentation</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <style>
-        :root {
-            --primary: #4F46E5;
-            --secondary: #10B981;
-            --dark: #1F2937;
-            --darker: #111827;
-            --light: #F9FAFB;
-            --muted: #6B7280;
-            --border: #E5E7EB;
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Inter', sans-serif;
-            line-height: 1.7;
-            color: var(--dark);
-            background: var(--light);
-        }
-        header {
-            background: white;
-            border-bottom: 1px solid var(--border);
-            padding: 1rem 2rem;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-        .header-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            font-weight: 700;
-            font-size: 1.25rem;
-            color: var(--dark);
-            text-decoration: none;
-        }
-        .logo img { width: 32px; }
-        nav a {
-            color: var(--muted);
-            text-decoration: none;
-            margin-left: 2rem;
-            font-weight: 500;
-        }
-        nav a:hover { color: var(--primary); }
-        .doc-layout {
-            display: grid;
-            grid-template-columns: 250px 1fr;
-            max-width: 1200px;
-            margin: 0 auto;
-            min-height: calc(100vh - 65px);
-        }
-        .sidebar {
-            background: white;
-            border-right: 1px solid var(--border);
-            padding: 2rem 1.5rem;
-            position: sticky;
-            top: 65px;
-            height: calc(100vh - 65px);
-            overflow-y: auto;
-        }
-        .sidebar h4 {
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: var(--muted);
-            margin-bottom: 0.75rem;
-            margin-top: 1.5rem;
-        }
-        .sidebar h4:first-child { margin-top: 0; }
-        .sidebar a {
-            display: block;
-            padding: 0.5rem 0;
-            color: var(--dark);
-            text-decoration: none;
-            font-size: 0.9rem;
-        }
-        .sidebar a:hover { color: var(--primary); }
-        .sidebar a.active {
-            color: var(--primary);
-            font-weight: 600;
-        }
-        .content {
-            padding: 3rem;
-            max-width: 800px;
-        }
-        .content h1 {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-        }
-        .content .subtitle {
-            font-size: 1.25rem;
-            color: var(--muted);
-            margin-bottom: 2rem;
-        }
-        .content h2 {
-            font-size: 1.5rem;
-            margin: 2.5rem 0 1rem;
-            padding-top: 1rem;
-            border-top: 1px solid var(--border);
-        }
-        .content h3 {
-            font-size: 1.2rem;
-            margin: 1.5rem 0 0.75rem;
-        }
-        .content p {
-            margin-bottom: 1rem;
-        }
-        .content ul, .content ol {
-            margin-left: 1.5rem;
-            margin-bottom: 1rem;
-        }
-        .content li { margin-bottom: 0.5rem; }
-        .content code {
-            background: #E5E7EB;
-            padding: 0.2rem 0.5rem;
-            border-radius: 4px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.9em;
-        }
-        .code-block {
-            background: var(--darker);
-            border-radius: 8px;
-            margin: 1rem 0;
-            overflow: hidden;
-        }
-        .code-header {
-            background: #374151;
-            padding: 0.5rem 1rem;
-            font-size: 0.8rem;
-            color: #9CA3AF;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .code-content {
-            padding: 1rem;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.9rem;
-            color: #E5E7EB;
-            overflow-x: auto;
-        }
-        .code-content .comment { color: #6B7280; }
-        .code-content .command { color: #60A5FA; }
-        .copy-btn {
-            background: transparent;
-            border: none;
-            color: #9CA3AF;
-            cursor: pointer;
-            padding: 0.25rem 0.5rem;
-        }
-        .copy-btn:hover { color: white; }
-        .alert {
-            padding: 1rem 1.25rem;
-            border-radius: 8px;
-            margin: 1.5rem 0;
-        }
-        .alert-info {
-            background: #EEF2FF;
-            border-left: 4px solid var(--primary);
-        }
-        .alert-success {
-            background: #ECFDF5;
-            border-left: 4px solid var(--secondary);
-        }
-        .alert-warning {
-            background: #FFFBEB;
-            border-left: 4px solid #F59E0B;
-        }
-        .alert h5 {
-            font-size: 0.9rem;
-            margin-bottom: 0.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        .alert p { margin: 0; font-size: 0.95rem; }
-        .step-number {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 32px;
-            height: 32px;
-            background: var(--primary);
-            color: white;
-            border-radius: 50%;
-            font-weight: 600;
-            margin-right: 0.75rem;
-        }
-        .time-estimate {
-            display: inline-block;
-            background: var(--secondary);
-            color: white;
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 500;
-            margin-left: 0.5rem;
-        }
-        footer {
-            margin-top: 4rem;
-            padding: 2rem;
-            text-align: center;
-            color: var(--muted);
-            border-top: 1px solid var(--border);
-        }
-        footer a { color: var(--primary); text-decoration: none; }
-        @media (max-width: 768px) {
-            .doc-layout { grid-template-columns: 1fr; }
-            .sidebar { display: none; }
-            .content { padding: 1.5rem; }
-        }
-    </style>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/docs.css">
 </head>
 <body>
-    <header>
-        <div class="header-content">
+    <nav class="doc-nav" id="nav">
+        <div class="nav-container">
             <a href="../index.html" class="logo">
-                <img src="../assets/logo.svg" alt="Rebuttr">
-                Rebuttr Docs
+                <span class="logo-mark">RF</span>
+                <span class="logo-text">Rebuttr</span>
             </a>
-            <nav>
-                <a href="../index.html">Home</a>
-                <a href="../tutorial.html">Tutorial</a>
-                <a href="https://github.com/genomewalker/rebuttr">GitHub</a>
-            </nav>
+            <ul class="nav-links">
+                <li><a href="../index.html">Home</a></li>
+                <li><a href="../tutorial.html">Tutorial</a></li>
+                <li><a href="https://github.com/genomewalker/rebuttr">GitHub</a></li>
+            </ul>
         </div>
-    </header>
+    </nav>
 
     <div class="doc-layout">
-        <aside class="sidebar">
+        <aside class="doc-sidebar">
             <h4>Getting Started</h4>
             <a href="installation.html">Installation</a>
             <a href="quickstart.html" class="active">Quick Start</a>
@@ -264,40 +48,53 @@
             <a href="troubleshooting.html">Troubleshooting</a>
         </aside>
 
-        <main class="content">
-            <h1>Quick Start <span class="time-estimate">5 min</span></h1>
-            <p class="subtitle">Get up and running with Rebuttr in just 5 minutes.</p>
+        <main class="doc-content">
+            <h1>Quick Start</h1>
+            <p class="doc-subtitle">Get up and running with Rebuttr in just 5 minutes.</p>
 
             <div class="alert alert-info">
-                <h5><i class="fas fa-info-circle"></i> Prerequisites</h5>
+                <h5>Prerequisites</h5>
                 <p>Make sure you have <a href="installation.html">installed Rebuttr</a> and configured your OpenCode API key before starting.</p>
             </div>
 
-            <h2><span class="step-number">1</span>Launch Rebuttr</h2>
+            <h2>Step 1: Launch Rebuttr</h2>
             <p>Open your terminal and start Rebuttr:</p>
 
             <div class="code-block">
                 <div class="code-header">
                     <span>Terminal</span>
-                    <button class="copy-btn"><i class="far fa-copy"></i></button>
+                    <button class="copy-btn" onclick="copyCode(this)">Copy</button>
                 </div>
-                <div class="code-content">rebuttr</div>
+                <div class="code-content"><span class="prompt">$</span> <span class="command">rebuttr</span></div>
             </div>
 
             <p>Your browser will automatically open to <code>http://localhost:3001</code>. You'll see the Rebuttr dashboard with no papers yet.</p>
 
-            <h2><span class="step-number">2</span>Create a New Paper</h2>
+            <h2>Step 2: Create a New Paper</h2>
             <p>Click the <strong>"New Paper"</strong> button in the top-right corner. Fill in the details:</p>
 
-            <ul>
-                <li><strong>Title:</strong> Your manuscript title</li>
-                <li><strong>Journal:</strong> Target journal name</li>
-                <li><strong>Authors:</strong> Comma-separated author list</li>
-            </ul>
+            <table class="doc-table">
+                <tr>
+                    <th>Field</th>
+                    <th>Description</th>
+                </tr>
+                <tr>
+                    <td>Title</td>
+                    <td>Your manuscript title</td>
+                </tr>
+                <tr>
+                    <td>Journal</td>
+                    <td>Target journal name</td>
+                </tr>
+                <tr>
+                    <td>Authors</td>
+                    <td>Comma-separated author list</td>
+                </tr>
+            </table>
 
             <p>Click <strong>"Create Paper"</strong> to continue.</p>
 
-            <h2><span class="step-number">3</span>Import Your Reviews</h2>
+            <h2>Step 3: Import Your Reviews</h2>
             <p>Now add your peer review comments. You have several options:</p>
 
             <h3>Option A: Paste Text Directly</h3>
@@ -317,11 +114,11 @@
             </ol>
 
             <div class="alert alert-success">
-                <h5><i class="fas fa-magic"></i> Auto-Parsing</h5>
+                <h5>Auto-Parsing</h5>
                 <p>Rebuttr automatically splits reviews into individual comments and categorizes them (major, minor, technical, editorial).</p>
             </div>
 
-            <h2><span class="step-number">4</span>Generate AI Responses</h2>
+            <h2>Step 4: Generate AI Responses</h2>
             <p>With your reviews imported, you can now use AI to help draft responses:</p>
 
             <ol>
@@ -347,7 +144,7 @@ statistical approach, including..."
                 </div>
             </div>
 
-            <h2><span class="step-number">5</span>Export Your Rebuttal</h2>
+            <h2>Step 5: Export Your Rebuttal</h2>
             <p>Once you've drafted responses to all comments, export your rebuttal letter:</p>
 
             <ol>
@@ -360,7 +157,7 @@ statistical approach, including..."
             <p>Your rebuttal letter will be formatted with reviewer comments followed by your responses, ready for submission.</p>
 
             <div class="alert alert-success">
-                <h5><i class="fas fa-check-circle"></i> You're Ready!</h5>
+                <h5>You're Ready!</h5>
                 <p>You've completed the quick start guide. For more advanced features, check out the <a href="../tutorial.html">full tutorial</a> or explore the <a href="ai-features.html">AI features</a>.</p>
             </div>
 
@@ -374,7 +171,7 @@ statistical approach, including..."
         </main>
     </div>
 
-    <footer>
+    <footer class="doc-footer">
         <p>
             <a href="index.html">Documentation</a> |
             <a href="https://github.com/genomewalker/rebuttr">GitHub</a> |
@@ -383,15 +180,19 @@ statistical approach, including..."
     </footer>
 
     <script>
-        // Copy buttons
-        document.querySelectorAll('.copy-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const code = btn.closest('.code-block').querySelector('.code-content').textContent;
-                navigator.clipboard.writeText(code.trim());
-                btn.innerHTML = '<i class="fas fa-check"></i>';
-                setTimeout(() => btn.innerHTML = '<i class="far fa-copy"></i>', 2000);
-            });
+        // Nav scroll effect
+        const nav = document.getElementById('nav');
+        window.addEventListener('scroll', () => {
+            nav.classList.toggle('scrolled', window.scrollY > 50);
         });
+
+        // Copy code functionality
+        function copyCode(btn) {
+            const code = btn.closest('.code-block').querySelector('.code-content').textContent;
+            navigator.clipboard.writeText(code.trim());
+            btn.textContent = 'Copied!';
+            setTimeout(() => btn.textContent = 'Copy', 2000);
+        }
     </script>
 </body>
 </html>

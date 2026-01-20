@@ -5,268 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Exporting - Rebuttr Documentation</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <style>
-        :root {
-            --primary: #4F46E5;
-            --secondary: #10B981;
-            --dark: #1F2937;
-            --darker: #111827;
-            --light: #F9FAFB;
-            --muted: #6B7280;
-            --border: #E5E7EB;
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Inter', sans-serif;
-            line-height: 1.7;
-            color: var(--dark);
-            background: var(--light);
-        }
-        header {
-            background: white;
-            border-bottom: 1px solid var(--border);
-            padding: 1rem 2rem;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-        .header-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            font-weight: 700;
-            font-size: 1.25rem;
-            color: var(--dark);
-            text-decoration: none;
-        }
-        .logo img { width: 32px; }
-        nav a {
-            color: var(--muted);
-            text-decoration: none;
-            margin-left: 2rem;
-            font-weight: 500;
-        }
-        nav a:hover { color: var(--primary); }
-        .doc-layout {
-            display: grid;
-            grid-template-columns: 250px 1fr;
-            max-width: 1200px;
-            margin: 0 auto;
-            min-height: calc(100vh - 65px);
-        }
-        .sidebar {
-            background: white;
-            border-right: 1px solid var(--border);
-            padding: 2rem 1.5rem;
-            position: sticky;
-            top: 65px;
-            height: calc(100vh - 65px);
-            overflow-y: auto;
-        }
-        .sidebar h4 {
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: var(--muted);
-            margin-bottom: 0.75rem;
-            margin-top: 1.5rem;
-        }
-        .sidebar h4:first-child { margin-top: 0; }
-        .sidebar a {
-            display: block;
-            padding: 0.5rem 0;
-            color: var(--dark);
-            text-decoration: none;
-            font-size: 0.9rem;
-        }
-        .sidebar a:hover { color: var(--primary); }
-        .sidebar a.active {
-            color: var(--primary);
-            font-weight: 600;
-        }
-        .content {
-            padding: 3rem;
-            max-width: 800px;
-        }
-        .content h1 {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-        }
-        .content .subtitle {
-            font-size: 1.25rem;
-            color: var(--muted);
-            margin-bottom: 2rem;
-        }
-        .content h2 {
-            font-size: 1.5rem;
-            margin: 2.5rem 0 1rem;
-            padding-top: 1rem;
-            border-top: 1px solid var(--border);
-        }
-        .content h3 {
-            font-size: 1.2rem;
-            margin: 1.5rem 0 0.75rem;
-        }
-        .content p {
-            margin-bottom: 1rem;
-        }
-        .content ul, .content ol {
-            margin-left: 1.5rem;
-            margin-bottom: 1rem;
-        }
-        .content li { margin-bottom: 0.5rem; }
-        .content code {
-            background: #E5E7EB;
-            padding: 0.2rem 0.5rem;
-            border-radius: 4px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.9em;
-        }
-        .code-block {
-            background: var(--darker);
-            border-radius: 8px;
-            margin: 1rem 0;
-            overflow: hidden;
-        }
-        .code-header {
-            background: #374151;
-            padding: 0.5rem 1rem;
-            font-size: 0.8rem;
-            color: #9CA3AF;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .code-content {
-            padding: 1rem;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.9rem;
-            color: #E5E7EB;
-            overflow-x: auto;
-        }
-        .code-content .comment { color: #6B7280; }
-        .copy-btn {
-            background: transparent;
-            border: none;
-            color: #9CA3AF;
-            cursor: pointer;
-            padding: 0.25rem 0.5rem;
-        }
-        .copy-btn:hover { color: white; }
-        .alert {
-            padding: 1rem 1.25rem;
-            border-radius: 8px;
-            margin: 1.5rem 0;
-        }
-        .alert-info {
-            background: #EEF2FF;
-            border-left: 4px solid var(--primary);
-        }
-        .alert-success {
-            background: #ECFDF5;
-            border-left: 4px solid var(--secondary);
-        }
-        .alert-warning {
-            background: #FFFBEB;
-            border-left: 4px solid #F59E0B;
-        }
-        .alert h5 {
-            font-size: 0.9rem;
-            margin-bottom: 0.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        .alert p { margin: 0; font-size: 0.95rem; }
-        .format-card {
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 1.5rem;
-            margin: 1rem 0;
-            background: white;
-            display: flex;
-            gap: 1rem;
-            align-items: flex-start;
-        }
-        .format-card .icon {
-            width: 48px;
-            height: 48px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--light);
-            border-radius: 8px;
-            font-size: 1.5rem;
-            flex-shrink: 0;
-        }
-        .format-card .icon.word { color: #2B579A; }
-        .format-card .icon.json { color: #F7DF1E; }
-        .format-card .icon.md { color: var(--dark); }
-        .format-card .icon.pdf { color: #FF0000; }
-        .format-card h4 {
-            margin-bottom: 0.5rem;
-            color: var(--dark);
-        }
-        .format-card p {
-            color: var(--muted);
-            margin-bottom: 0;
-            font-size: 0.95rem;
-        }
-        .requirements-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 1rem 0;
-        }
-        .requirements-table th, .requirements-table td {
-            padding: 0.75rem 1rem;
-            border: 1px solid var(--border);
-            text-align: left;
-        }
-        .requirements-table th {
-            background: #F3F4F6;
-            font-weight: 600;
-        }
-        footer {
-            margin-top: 4rem;
-            padding: 2rem;
-            text-align: center;
-            color: var(--muted);
-            border-top: 1px solid var(--border);
-        }
-        footer a { color: var(--primary); text-decoration: none; }
-        @media (max-width: 768px) {
-            .doc-layout { grid-template-columns: 1fr; }
-            .sidebar { display: none; }
-            .content { padding: 1.5rem; }
-        }
-    </style>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/docs.css">
 </head>
 <body>
-    <header>
-        <div class="header-content">
+    <nav class="doc-nav" id="nav">
+        <div class="nav-container">
             <a href="../index.html" class="logo">
-                <img src="../assets/logo.svg" alt="Rebuttr">
-                Rebuttr Docs
+                <span class="logo-mark">RF</span>
+                <span class="logo-text">Rebuttr</span>
             </a>
-            <nav>
-                <a href="../index.html">Home</a>
-                <a href="../tutorial.html">Tutorial</a>
-                <a href="https://github.com/genomewalker/rebuttr">GitHub</a>
-            </nav>
+            <ul class="nav-links">
+                <li><a href="../index.html">Home</a></li>
+                <li><a href="../tutorial.html">Tutorial</a></li>
+                <li><a href="https://github.com/genomewalker/rebuttr">GitHub</a></li>
+            </ul>
         </div>
-    </header>
+    </nav>
 
     <div class="doc-layout">
-        <aside class="sidebar">
+        <aside class="doc-sidebar">
             <h4>Getting Started</h4>
             <a href="installation.html">Installation</a>
             <a href="quickstart.html">Quick Start</a>
@@ -289,44 +48,24 @@
             <a href="troubleshooting.html">Troubleshooting</a>
         </aside>
 
-        <main class="content">
+        <main class="doc-content">
             <h1>Exporting</h1>
-            <p class="subtitle">Export your rebuttal letters as Word documents, JSON data, or formatted reports.</p>
+            <p class="doc-subtitle">Export your rebuttal letters as Word documents, JSON data, or formatted reports.</p>
 
             <h2>Export Formats</h2>
             <p>Rebuttr supports multiple export formats to fit your workflow:</p>
 
-            <div class="format-card">
-                <div class="icon word"><i class="fas fa-file-word"></i></div>
-                <div>
-                    <h4>Word Document (.docx)</h4>
-                    <p>Professional, formatted documents ready for journal submission. Includes proper headings, formatting, and track changes support.</p>
-                </div>
-            </div>
+            <h3>Word Document (.docx)</h3>
+            <p>Professional, formatted documents ready for journal submission. Includes proper headings, formatting, and track changes support.</p>
 
-            <div class="format-card">
-                <div class="icon json"><i class="fas fa-code"></i></div>
-                <div>
-                    <h4>JSON (.json)</h4>
-                    <p>Structured data export for programmatic workflows, backups, or integration with other tools.</p>
-                </div>
-            </div>
+            <h3>JSON (.json)</h3>
+            <p>Structured data export for programmatic workflows, backups, or integration with other tools.</p>
 
-            <div class="format-card">
-                <div class="icon md"><i class="fas fa-file-alt"></i></div>
-                <div>
-                    <h4>Markdown (.md)</h4>
-                    <p>Plain text with formatting. Ideal for version control, collaboration, or conversion to other formats.</p>
-                </div>
-            </div>
+            <h3>Markdown (.md)</h3>
+            <p>Plain text with formatting. Ideal for version control, collaboration, or conversion to other formats.</p>
 
-            <div class="format-card">
-                <div class="icon pdf"><i class="fas fa-file-pdf"></i></div>
-                <div>
-                    <h4>PDF (.pdf)</h4>
-                    <p>Fixed-format document for final submissions or archiving. Generated from the Word template.</p>
-                </div>
-            </div>
+            <h3>PDF (.pdf)</h3>
+            <p>Fixed-format document for final submissions or archiving. Generated from the Word template.</p>
 
             <h2>Exporting via Web Interface</h2>
             <ol>
@@ -340,63 +79,63 @@
             <h2>Export Options</h2>
 
             <h3>Content Options</h3>
-            <table class="requirements-table">
+            <table class="doc-table">
                 <tr>
                     <th>Option</th>
                     <th>Description</th>
                     <th>Default</th>
                 </tr>
                 <tr>
-                    <td><strong>Include all reviewers</strong></td>
+                    <td>Include all reviewers</td>
                     <td>Export comments from all reviewers</td>
                     <td>Yes</td>
                 </tr>
                 <tr>
-                    <td><strong>Include editor comments</strong></td>
+                    <td>Include editor comments</td>
                     <td>Include editor/AE comments in export</td>
                     <td>Yes</td>
                 </tr>
                 <tr>
-                    <td><strong>Include unanswered</strong></td>
+                    <td>Include unanswered</td>
                     <td>Include comments without responses</td>
                     <td>No</td>
                 </tr>
                 <tr>
-                    <td><strong>Group by reviewer</strong></td>
+                    <td>Group by reviewer</td>
                     <td>Organize by reviewer vs. by category</td>
                     <td>Yes</td>
                 </tr>
                 <tr>
-                    <td><strong>Include line references</strong></td>
+                    <td>Include line references</td>
                     <td>Show manuscript line references</td>
                     <td>Yes</td>
                 </tr>
             </table>
 
             <h3>Formatting Options</h3>
-            <table class="requirements-table">
+            <table class="doc-table">
                 <tr>
                     <th>Option</th>
                     <th>Description</th>
                     <th>Default</th>
                 </tr>
                 <tr>
-                    <td><strong>Comment style</strong></td>
+                    <td>Comment style</td>
                     <td>Italic, bold, or quoted</td>
                     <td>Italic</td>
                 </tr>
                 <tr>
-                    <td><strong>Response style</strong></td>
+                    <td>Response style</td>
                     <td>Normal, indented, or boxed</td>
                     <td>Normal</td>
                 </tr>
                 <tr>
-                    <td><strong>Numbering</strong></td>
+                    <td>Numbering</td>
                     <td>Auto-number comments</td>
                     <td>Yes</td>
                 </tr>
                 <tr>
-                    <td><strong>Include header</strong></td>
+                    <td>Include header</td>
                     <td>Add paper title and metadata</td>
                     <td>Yes</td>
                 </tr>
@@ -408,27 +147,27 @@
             <div class="code-block">
                 <div class="code-header">
                     <span>Terminal</span>
-                    <button class="copy-btn"><i class="far fa-copy"></i></button>
+                    <button class="copy-btn" onclick="copyCode(this)">Copy</button>
                 </div>
                 <div class="code-content">
 <span class="comment"># Export as Word document</span>
-rebuttr export --paper "My Paper" --format docx --output rebuttal.docx
+<span class="prompt">$</span> <span class="command">rebuttr export --paper "My Paper" --format docx --output rebuttal.docx</span>
 
 <span class="comment"># Export as JSON</span>
-rebuttr export --paper "My Paper" --format json --output data.json
+<span class="prompt">$</span> <span class="command">rebuttr export --paper "My Paper" --format json --output data.json</span>
 
 <span class="comment"># Export as Markdown</span>
-rebuttr export --paper "My Paper" --format md --output rebuttal.md
+<span class="prompt">$</span> <span class="command">rebuttr export --paper "My Paper" --format md --output rebuttal.md</span>
 
 <span class="comment"># Export specific reviewer only</span>
-rebuttr export --paper "My Paper" --reviewer 1 --output reviewer1.docx
+<span class="prompt">$</span> <span class="command">rebuttr export --paper "My Paper" --reviewer 1 --output reviewer1.docx</span>
 
 <span class="comment"># Export with custom options</span>
-rebuttr export --paper "My Paper" \
-  --format docx \
-  --group-by category \
-  --include-unanswered \
-  --output full-rebuttal.docx
+<span class="prompt">$</span> <span class="command">rebuttr export --paper "My Paper" \</span>
+<span class="command">  --format docx \</span>
+<span class="command">  --group-by category \</span>
+<span class="command">  --include-unanswered \</span>
+<span class="command">  --output full-rebuttal.docx</span>
                 </div>
             </div>
 
@@ -475,7 +214,7 @@ REVIEWER 2
             <div class="code-block">
                 <div class="code-header">
                     <span>export.json</span>
-                    <button class="copy-btn"><i class="far fa-copy"></i></button>
+                    <button class="copy-btn" onclick="copyCode(this)">Copy</button>
                 </div>
                 <div class="code-content">
 {
@@ -514,14 +253,14 @@ REVIEWER 2
             <div class="code-block">
                 <div class="code-header">
                     <span>Terminal</span>
-                    <button class="copy-btn"><i class="far fa-copy"></i></button>
+                    <button class="copy-btn" onclick="copyCode(this)">Copy</button>
                 </div>
                 <div class="code-content">
 <span class="comment"># Export all papers</span>
-rebuttr export --all --format json --output-dir ./exports/
+<span class="prompt">$</span> <span class="command">rebuttr export --all --format json --output-dir ./exports/</span>
 
 <span class="comment"># Export completed papers only</span>
-rebuttr export --all --completed --format docx --output-dir ./rebuttals/
+<span class="prompt">$</span> <span class="command">rebuttr export --all --completed --format docx --output-dir ./rebuttals/</span>
                 </div>
             </div>
 
@@ -537,15 +276,15 @@ rebuttr export --all --completed --format docx --output-dir ./rebuttals/
             <div class="code-block">
                 <div class="code-header">
                     <span>Terminal</span>
-                    <button class="copy-btn"><i class="far fa-copy"></i></button>
+                    <button class="copy-btn" onclick="copyCode(this)">Copy</button>
                 </div>
                 <div class="code-content">
-rebuttr export --paper "My Paper" --template nature.docx --output rebuttal.docx
+<span class="prompt">$</span> <span class="command">rebuttr export --paper "My Paper" --template nature.docx --output rebuttal.docx</span>
                 </div>
             </div>
 
             <div class="alert alert-info">
-                <h5><i class="fas fa-info-circle"></i> Template Styles</h5>
+                <h5>Template Styles</h5>
                 <p>Templates use named styles: "Comment" for reviewer text, "Response" for your replies, and standard heading styles for structure.</p>
             </div>
 
@@ -559,8 +298,13 @@ rebuttr export --paper "My Paper" --template nature.docx --output rebuttal.docx
             </ul>
 
             <div class="alert alert-success">
-                <h5><i class="fas fa-check-circle"></i> Pro Tip</h5>
+                <h5>Pro Tip</h5>
                 <p>Many journals accept Markdown or can convert from Word. Check your target journal's submission guidelines for preferred formats.</p>
+            </div>
+
+            <div class="alert alert-warning">
+                <h5>Warning</h5>
+                <p>Always verify exported documents before submission. Review formatting, numbering, and ensure all responses are included.</p>
             </div>
 
             <h2>Next Steps</h2>
@@ -572,7 +316,7 @@ rebuttr export --paper "My Paper" --template nature.docx --output rebuttal.docx
         </main>
     </div>
 
-    <footer>
+    <footer class="doc-footer">
         <p>
             <a href="index.html">Documentation</a> |
             <a href="https://github.com/genomewalker/rebuttr">GitHub</a> |
@@ -581,15 +325,19 @@ rebuttr export --paper "My Paper" --template nature.docx --output rebuttal.docx
     </footer>
 
     <script>
-        // Copy buttons
-        document.querySelectorAll('.copy-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const code = btn.closest('.code-block').querySelector('.code-content').textContent;
-                navigator.clipboard.writeText(code.trim());
-                btn.innerHTML = '<i class="fas fa-check"></i>';
-                setTimeout(() => btn.innerHTML = '<i class="far fa-copy"></i>', 2000);
-            });
+        // Nav scroll effect
+        const nav = document.getElementById('nav');
+        window.addEventListener('scroll', () => {
+            nav.classList.toggle('scrolled', window.scrollY > 50);
         });
+
+        // Copy code functionality
+        function copyCode(btn) {
+            const code = btn.closest('.code-block').querySelector('.code-content').textContent;
+            navigator.clipboard.writeText(code.trim());
+            btn.textContent = 'Copied!';
+            setTimeout(() => btn.textContent = 'Copy', 2000);
+        }
     </script>
 </body>
 </html>

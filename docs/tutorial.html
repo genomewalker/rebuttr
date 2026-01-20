@@ -3,845 +3,272 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tutorial - Rebuttr</title>
+    <title>Tutorial - Rebuttr Documentation</title>
     <meta name="description" content="Step-by-step tutorial for using Rebuttr to manage peer review responses.">
-
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-
-    <style>
-        :root {
-            --primary: #4F46E5;
-            --primary-dark: #4338CA;
-            --secondary: #10B981;
-            --accent: #F59E0B;
-            --dark: #1F2937;
-            --darker: #111827;
-            --light: #F9FAFB;
-            --muted: #6B7280;
-            --border: #E5E7EB;
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            line-height: 1.7;
-            color: var(--dark);
-            background: var(--light);
-        }
-
-        /* Navigation */
-        nav {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 100;
-            background: rgba(255,255,255,0.95);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid var(--border);
-            padding: 1rem 2rem;
-        }
-
-        .nav-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .nav-logo {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            font-weight: 700;
-            font-size: 1.25rem;
-            color: var(--dark);
-            text-decoration: none;
-        }
-
-        .nav-logo img { width: 32px; height: 32px; }
-
-        .nav-links {
-            display: flex;
-            gap: 2rem;
-            list-style: none;
-        }
-
-        .nav-links a {
-            color: var(--muted);
-            text-decoration: none;
-            font-weight: 500;
-            transition: color 0.2s;
-        }
-
-        .nav-links a:hover, .nav-links a.active {
-            color: var(--primary);
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            font-weight: 600;
-            text-decoration: none;
-            transition: all 0.2s;
-            border: none;
-            cursor: pointer;
-            font-size: 0.95rem;
-        }
-
-        .btn-primary {
-            background: var(--primary);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: var(--primary-dark);
-        }
-
-        /* Tutorial Content */
-        .tutorial-hero {
-            padding: 8rem 2rem 4rem;
-            background: linear-gradient(135deg, #EEF2FF 0%, #F5F3FF 100%);
-            text-align: center;
-        }
-
-        .tutorial-hero h1 {
-            font-size: 3rem;
-            font-weight: 800;
-            margin-bottom: 1rem;
-        }
-
-        .tutorial-hero p {
-            font-size: 1.25rem;
-            color: var(--muted);
-            max-width: 600px;
-            margin: 0 auto;
-        }
-
-        .tutorial-nav {
-            max-width: 900px;
-            margin: 2rem auto 0;
-            display: flex;
-            justify-content: center;
-            gap: 1rem;
-            flex-wrap: wrap;
-        }
-
-        .tutorial-nav a {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.75rem 1.25rem;
-            background: white;
-            border-radius: 100px;
-            text-decoration: none;
-            color: var(--dark);
-            font-weight: 500;
-            font-size: 0.9rem;
-            transition: all 0.2s;
-            border: 1px solid var(--border);
-        }
-
-        .tutorial-nav a:hover {
-            border-color: var(--primary);
-            color: var(--primary);
-        }
-
-        .tutorial-nav .step-num {
-            width: 24px;
-            height: 24px;
-            background: var(--primary);
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.75rem;
-            font-weight: 700;
-        }
-
-        /* Tutorial Steps */
-        .tutorial-content {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 4rem 2rem;
-        }
-
-        .tutorial-step {
-            margin-bottom: 6rem;
-            scroll-margin-top: 100px;
-        }
-
-        .step-header {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .step-number {
-            width: 48px;
-            height: 48px;
-            background: linear-gradient(135deg, var(--primary), #7C3AED);
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 1.25rem;
-            flex-shrink: 0;
-        }
-
-        .step-title {
-            font-size: 1.75rem;
-            font-weight: 700;
-        }
-
-        .step-description {
-            color: var(--muted);
-            font-size: 1.1rem;
-            margin-bottom: 2rem;
-        }
-
-        .screenshot-container {
-            background: white;
-            border-radius: 16px;
-            padding: 1.5rem;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-            margin-bottom: 2rem;
-        }
-
-        .screenshot-container img {
-            width: 100%;
-            border-radius: 8px;
-            border: 1px solid var(--border);
-        }
-
-        .screenshot-placeholder {
-            background: linear-gradient(135deg, #1F2937 0%, #374151 100%);
-            border-radius: 8px;
-            overflow: hidden;
-            color: white;
-        }
-
-        .placeholder-header {
-            background: rgba(0,0,0,0.3);
-            padding: 0.75rem 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-
-        .placeholder-header i {
-            color: var(--primary);
-        }
-
-        .placeholder-content {
-            padding: 1.5rem;
-        }
-
-        .placeholder-element {
-            margin-bottom: 0.75rem;
-        }
-
-        .placeholder-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1rem;
-        }
-
-        .placeholder-box {
-            background: rgba(255,255,255,0.1);
-            border: 1px dashed rgba(255,255,255,0.3);
-            border-radius: 8px;
-            padding: 1rem;
-            text-align: center;
-        }
-
-        .placeholder-box i {
-            font-size: 1.5rem;
-            margin-bottom: 0.5rem;
-            display: block;
-            color: var(--muted);
-        }
-
-        .placeholder-box span {
-            display: block;
-            font-weight: 500;
-        }
-
-        .placeholder-box small {
-            color: rgba(255,255,255,0.5);
-            font-size: 0.8rem;
-        }
-
-        .placeholder-steps {
-            margin: 1rem 0;
-        }
-
-        .placeholder-step {
-            padding: 0.5rem 0;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            color: rgba(255,255,255,0.5);
-        }
-
-        .placeholder-step.done {
-            color: var(--secondary);
-        }
-
-        .placeholder-step.active {
-            color: var(--accent);
-        }
-
-        .placeholder-comment {
-            background: rgba(255,255,255,0.1);
-            border-radius: 8px;
-            padding: 1rem;
-            margin-bottom: 1rem;
-        }
-
-        .placeholder-comment .badge {
-            display: inline-block;
-            padding: 0.2rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-
-        .placeholder-comment .badge.major {
-            background: #FEE2E2;
-            color: #DC2626;
-        }
-
-        .placeholder-comment .badge.methodology {
-            background: #E0E7FF;
-            color: #4F46E5;
-        }
-
-        .placeholder-two-col {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-        }
-
-        .placeholder-panel {
-            background: rgba(255,255,255,0.1);
-            border-radius: 8px;
-            padding: 1rem;
-        }
-
-        .placeholder-panel strong {
-            display: block;
-            margin-bottom: 0.75rem;
-        }
-
-        .placeholder-checkbox {
-            padding: 0.4rem 0;
-            font-size: 0.85rem;
-            color: rgba(255,255,255,0.7);
-        }
-
-        .placeholder-textarea {
-            background: rgba(0,0,0,0.2);
-            border-radius: 4px;
-            padding: 0.75rem;
-            min-height: 80px;
-            font-size: 0.85rem;
-            color: rgba(255,255,255,0.5);
-        }
-
-        .placeholder-btn {
-            display: inline-block;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            font-size: 0.85rem;
-            background: rgba(255,255,255,0.1);
-            margin-left: 0.5rem;
-        }
-
-        .placeholder-btn.primary {
-            background: var(--primary);
-        }
-
-        .placeholder-export-options {
-            display: flex;
-            gap: 1rem;
-            margin: 1rem 0;
-        }
-
-        .placeholder-export-btn {
-            padding: 0.75rem 1.25rem;
-            border-radius: 8px;
-            background: rgba(255,255,255,0.1);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .placeholder-export-btn.primary {
-            background: var(--dark);
-            border: 1px solid rgba(255,255,255,0.2);
-        }
-
-        .placeholder-list {
-            margin-top: 0.5rem;
-        }
-
-        .placeholder-list-item {
-            padding: 0.75rem 1rem;
-            background: rgba(255,255,255,0.05);
-            border-radius: 6px;
-            margin-bottom: 0.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            font-size: 0.9rem;
-        }
-
-        .placeholder-list-item i {
-            color: var(--muted);
-        }
-
-        .screenshot-caption {
-            text-align: center;
-            color: var(--muted);
-            font-size: 0.9rem;
-            margin-top: 1rem;
-        }
-
-        .step-instructions {
-            background: white;
-            border-radius: 12px;
-            padding: 1.5rem 2rem;
-            border-left: 4px solid var(--primary);
-        }
-
-        .step-instructions h4 {
-            font-size: 1rem;
-            color: var(--primary);
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .step-instructions ol, .step-instructions ul {
-            margin-left: 1.5rem;
-            color: var(--dark);
-        }
-
-        .step-instructions li {
-            margin-bottom: 0.75rem;
-        }
-
-        .step-instructions code {
-            background: var(--light);
-            padding: 0.2rem 0.5rem;
-            border-radius: 4px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.9em;
-            color: var(--primary-dark);
-        }
-
-        .tip-box {
-            background: #ECFDF5;
-            border: 1px solid #A7F3D0;
-            border-radius: 12px;
-            padding: 1.25rem 1.5rem;
-            margin-top: 1.5rem;
-        }
-
-        .tip-box h5 {
-            color: #065F46;
-            font-size: 0.9rem;
-            margin-bottom: 0.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .tip-box p {
-            color: #047857;
-            font-size: 0.95rem;
-        }
-
-        .warning-box {
-            background: #FEF3C7;
-            border: 1px solid #FCD34D;
-            border-radius: 12px;
-            padding: 1.25rem 1.5rem;
-            margin-top: 1.5rem;
-        }
-
-        .warning-box h5 {
-            color: #92400E;
-            font-size: 0.9rem;
-            margin-bottom: 0.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .warning-box p {
-            color: #B45309;
-            font-size: 0.95rem;
-        }
-
-        /* Feature highlights */
-        .feature-highlight {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-            margin-top: 2rem;
-        }
-
-        .highlight-card {
-            background: white;
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 1.5rem;
-        }
-
-        .highlight-card i {
-            font-size: 1.5rem;
-            color: var(--primary);
-            margin-bottom: 1rem;
-        }
-
-        .highlight-card h5 {
-            font-size: 1rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .highlight-card p {
-            color: var(--muted);
-            font-size: 0.9rem;
-        }
-
-        /* Next Steps */
-        .next-steps {
-            background: linear-gradient(135deg, var(--primary) 0%, #7C3AED 100%);
-            border-radius: 16px;
-            padding: 3rem;
-            text-align: center;
-            color: white;
-        }
-
-        .next-steps h3 {
-            font-size: 1.75rem;
-            margin-bottom: 1rem;
-        }
-
-        .next-steps p {
-            opacity: 0.9;
-            margin-bottom: 2rem;
-        }
-
-        .next-steps-links {
-            display: flex;
-            justify-content: center;
-            gap: 1rem;
-            flex-wrap: wrap;
-        }
-
-        .next-steps-links a {
-            background: white;
-            color: var(--primary);
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            text-decoration: none;
-            font-weight: 600;
-            transition: all 0.2s;
-        }
-
-        .next-steps-links a:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px -10px rgba(0,0,0,0.3);
-        }
-
-        /* Footer */
-        footer {
-            padding: 3rem 2rem;
-            background: var(--darker);
-            color: white;
-            text-align: center;
-        }
-
-        footer a {
-            color: rgba(255,255,255,0.7);
-            text-decoration: none;
-        }
-
-        footer a:hover {
-            color: white;
-        }
-
-        @media (max-width: 768px) {
-            .nav-links { display: none; }
-            .tutorial-hero h1 { font-size: 2rem; }
-            .tutorial-nav { flex-direction: column; align-items: center; }
-            .step-header { flex-direction: column; text-align: center; }
-        }
-    </style>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/docs.css">
 </head>
 <body>
-    <!-- Navigation -->
-    <nav>
+    <nav class="doc-nav" id="nav">
         <div class="nav-container">
-            <a href="index.html" class="nav-logo">
-                <img src="assets/logo.svg" alt="Rebuttr">
-                Rebuttr
+            <a href="index.html" class="logo">
+                <span class="logo-mark">RF</span>
+                <span class="logo-text">Rebuttr</span>
             </a>
             <ul class="nav-links">
-                <li><a href="index.html#features">Features</a></li>
-                <li><a href="index.html#how-it-works">How It Works</a></li>
-                <li><a href="tutorial.html" class="active">Tutorial</a></li>
-                <li><a href="guides/">Guides</a></li>
+                <li><a href="index.html">Home</a></li>
+                <li><a href="tutorial.html">Tutorial</a></li>
+                <li><a href="https://github.com/genomewalker/rebuttr">GitHub</a></li>
             </ul>
-            <a href="https://github.com/genomewalker/rebuttr" class="btn btn-primary">
-                <i class="fab fa-github"></i> GitHub
-            </a>
         </div>
     </nav>
 
-    <!-- Hero -->
-    <section class="tutorial-hero">
-        <h1>Getting Started Tutorial</h1>
-        <p>Learn how to use Rebuttr to manage your peer review responses from start to finish.</p>
-        <div class="tutorial-nav">
-            <a href="#step1"><span class="step-num">1</span> Installation</a>
-            <a href="#step2"><span class="step-num">2</span> Add Paper</a>
-            <a href="#step3"><span class="step-num">3</span> Process</a>
-            <a href="#step4"><span class="step-num">4</span> Review</a>
-            <a href="#step5"><span class="step-num">5</span> Export</a>
-        </div>
-    </section>
+    <div class="doc-layout">
+        <aside class="doc-sidebar">
+            <h4>Getting Started</h4>
+            <a href="guides/installation.html">Installation</a>
+            <a href="guides/quickstart.html">Quick Start</a>
+            <a href="tutorial.html" class="active">Tutorial</a>
 
-    <!-- Tutorial Content -->
-    <div class="tutorial-content">
+            <h4>User Guide</h4>
+            <a href="guides/importing.html">Importing Reviews</a>
+            <a href="guides/ai-features.html">AI Features</a>
+            <a href="guides/exporting.html">Exporting</a>
+            <a href="guides/multi-paper.html">Multi-Paper</a>
 
-        <!-- Step 1: Installation -->
-        <section class="tutorial-step" id="step1">
-            <div class="step-header">
+            <h4>Configuration</h4>
+            <a href="guides/configuration.html">Configuration</a>
+            <a href="guides/cli-reference.html">CLI Reference</a>
+            <a href="guides/skills.html">AI Skills</a>
+
+            <h4>Reference</h4>
+            <a href="api/">API Reference</a>
+            <a href="guides/json-format.html">JSON Format</a>
+            <a href="guides/troubleshooting.html">Troubleshooting</a>
+        </aside>
+
+        <main class="doc-content">
+            <h1>Getting Started Tutorial</h1>
+            <p class="doc-subtitle">Learn how to use Rebuttr to manage your peer review responses from start to finish.</p>
+
+            <!-- Step 1: Installation -->
+            <h2 id="step1">Step 1: Installation</h2>
+            <p>Install Rebuttr and its dependencies. This takes about 2 minutes.</p>
+
+            <div class="tutorial-step">
                 <div class="step-number">1</div>
-                <h2 class="step-title">Installation</h2>
-            </div>
-            <p class="step-description">Install Rebuttr and its dependencies. This takes about 2 minutes.</p>
-
-            <div class="step-instructions">
-                <h4><i class="fas fa-terminal"></i> Terminal Commands</h4>
-                <ol>
-                    <li>First, install the OpenCode CLI (required for AI features):
-                        <br><code>npm i -g opencode-ai</code>
-                    </li>
-                    <li>Then install Rebuttr:
-                        <br><code>npm i -g github:genomewalker/rebuttr</code>
-                    </li>
-                    <li>Verify the installation:
-                        <br><code>rebuttr --help</code>
-                    </li>
-                </ol>
+                <div class="step-content">
+                    <h3>Install Dependencies</h3>
+                    <p>First, install the OpenCode CLI (required for AI features), then install Rebuttr.</p>
+                </div>
             </div>
 
-            <div class="tip-box">
-                <h5><i class="fas fa-lightbulb"></i> Tip</h5>
+            <div class="code-block">
+                <div class="code-header">
+                    <span>Terminal</span>
+                    <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                </div>
+                <div class="code-content">
+<span class="comment"># Install OpenCode CLI (required for AI features)</span>
+<span class="prompt">$</span> <span class="command">npm i -g opencode-ai</span>
+
+<span class="comment"># Install Rebuttr</span>
+<span class="prompt">$</span> <span class="command">npm i -g github:genomewalker/rebuttr</span>
+
+<span class="comment"># Verify installation</span>
+<span class="prompt">$</span> <span class="command">rebuttr --help</span>
+                </div>
+            </div>
+
+            <div class="alert alert-info">
+                <h5>Tip</h5>
                 <p>On macOS, you may need Xcode Command Line Tools. Run <code>xcode-select --install</code> if you see compilation errors.</p>
             </div>
-        </section>
 
-        <!-- Step 2: Add Paper -->
-        <section class="tutorial-step" id="step2">
-            <div class="step-header">
+            <!-- Step 2: Add Paper -->
+            <h2 id="step2">Step 2: Add Your Paper</h2>
+            <p>Import your reviewer comments into Rebuttr. You can paste text, upload files, or use the CLI.</p>
+
+            <div class="tutorial-step">
                 <div class="step-number">2</div>
-                <h2 class="step-title">Add Your Paper</h2>
+                <div class="step-content">
+                    <h3>Import Reviews</h3>
+                    <p>Launch Rebuttr and add your manuscript with reviewer comments.</p>
+                </div>
             </div>
-            <p class="step-description">Import your reviewer comments into Rebuttr. You can paste text, upload files, or use the CLI.</p>
 
             <div class="screenshot-container">
                 <img src="assets/tutorial/add-paper.png" alt="Add Paper Interface">
                 <p class="screenshot-caption">Upload your manuscript and reviews to get started</p>
             </div>
 
-            <div class="step-instructions">
-                <h4><i class="fas fa-list-check"></i> Steps</h4>
-                <ol>
-                    <li>Launch Rebuttr: <code>rebuttr</code></li>
-                    <li>Click <strong>"Add Paper"</strong> button (top right)</li>
-                    <li>Enter your paper title and metadata</li>
-                    <li>Choose how to import reviews:
-                        <ul>
-                            <li><strong>Paste text:</strong> Copy/paste reviewer comments directly</li>
-                            <li><strong>Upload file:</strong> Drop a PDF, DOCX, or TXT file</li>
-                            <li><strong>Import JSON:</strong> Use structured JSON format</li>
-                        </ul>
-                    </li>
-                    <li>Click <strong>"Process"</strong> to parse the reviews</li>
-                </ol>
+            <h3>Steps to Add a Paper</h3>
+            <ol>
+                <li>Launch Rebuttr: <code>rebuttr</code></li>
+                <li>Click <strong>"Add Paper"</strong> button (top right)</li>
+                <li>Enter your paper title and metadata</li>
+                <li>Choose how to import reviews:
+                    <ul>
+                        <li><strong>Paste text:</strong> Copy/paste reviewer comments directly</li>
+                        <li><strong>Upload file:</strong> Drop a PDF, DOCX, or TXT file</li>
+                        <li><strong>Import JSON:</strong> Use structured JSON format</li>
+                    </ul>
+                </li>
+                <li>Click <strong>"Process"</strong> to parse the reviews</li>
+            </ol>
+
+            <div class="alert alert-success">
+                <h5>Supported Formats</h5>
+                <p>Rebuttr supports <strong>PDF</strong> decision letters from journals, <strong>DOCX</strong> files with reviewer comments, and structured <strong>JSON</strong> for programmatic import.</p>
             </div>
 
-            <div class="feature-highlight">
-                <div class="highlight-card">
-                    <i class="fas fa-file-pdf"></i>
-                    <h5>PDF Support</h5>
-                    <p>Upload decision letters directly from journals.</p>
-                </div>
-                <div class="highlight-card">
-                    <i class="fas fa-file-word"></i>
-                    <h5>Word Documents</h5>
-                    <p>Parse DOCX files with reviewer comments.</p>
-                </div>
-                <div class="highlight-card">
-                    <i class="fas fa-code"></i>
-                    <h5>JSON Format</h5>
-                    <p>Use structured JSON for programmatic import.</p>
-                </div>
-            </div>
-        </section>
+            <!-- Step 3: Process -->
+            <h2 id="step3">Step 3: Process with AI</h2>
+            <p>Let AI analyze your comments and generate expert discussions with potential solutions.</p>
 
-        <!-- Step 3: Process -->
-        <section class="tutorial-step" id="step3">
-            <div class="step-header">
+            <div class="tutorial-step">
                 <div class="step-number">3</div>
-                <h2 class="step-title">Process with AI</h2>
+                <div class="step-content">
+                    <h3>AI Analysis</h3>
+                    <p>Click "Process Paper" to let the AI analyze each comment and generate responses.</p>
+                </div>
             </div>
-            <p class="step-description">Let AI analyze your comments and generate expert discussions with potential solutions.</p>
 
             <div class="screenshot-container">
                 <img src="assets/tutorial/processing.png" alt="Processing Interface">
                 <p class="screenshot-caption">AI processing analyzes each comment and generates responses</p>
             </div>
 
-            <div class="step-instructions">
-                <h4><i class="fas fa-list-check"></i> Steps</h4>
-                <ol>
-                    <li>Click the <strong>"Process Paper"</strong> button in the dashboard</li>
-                    <li>Watch the progress as AI analyzes each comment:
-                        <ul>
-                            <li>Categorizes comment type (major/minor)</li>
-                            <li>Identifies key concerns</li>
-                            <li>Generates expert panel discussion</li>
-                            <li>Creates potential solutions</li>
-                        </ul>
-                    </li>
-                    <li>Processing runs in the background - you can continue working</li>
-                </ol>
-            </div>
+            <h3>What Happens During Processing</h3>
+            <ol>
+                <li>Click the <strong>"Process Paper"</strong> button in the dashboard</li>
+                <li>Watch the progress as AI analyzes each comment:
+                    <ul>
+                        <li>Categorizes comment type (major/minor)</li>
+                        <li>Identifies key concerns</li>
+                        <li>Generates expert panel discussion</li>
+                        <li>Creates potential solutions</li>
+                    </ul>
+                </li>
+                <li>Processing runs in the background - you can continue working</li>
+            </ol>
 
-            <div class="tip-box">
-                <h5><i class="fas fa-lightbulb"></i> What the AI Generates</h5>
+            <div class="alert alert-info">
+                <h5>What the AI Generates</h5>
                 <p>For each comment, you'll get: an expert panel discussion, recommended response, advice to the author, and 2-3 alternative response strategies with different effort levels.</p>
             </div>
-        </section>
 
-        <!-- Step 4: Review -->
-        <section class="tutorial-step" id="step4">
-            <div class="step-header">
+            <!-- Step 4: Review -->
+            <h2 id="step4">Step 4: Review & Edit Responses</h2>
+            <p>Browse AI-generated responses, select from strategies, and refine your answers.</p>
+
+            <div class="tutorial-step">
                 <div class="step-number">4</div>
-                <h2 class="step-title">Review & Edit Responses</h2>
+                <div class="step-content">
+                    <h3>Refine Your Responses</h3>
+                    <p>Select from AI-suggested solutions and customize your responses.</p>
+                </div>
             </div>
-            <p class="step-description">Browse AI-generated responses, select from strategies, and refine your answers.</p>
 
             <div class="screenshot-container">
                 <img src="assets/tutorial/comment-detail.png" alt="Comment Detail View">
                 <p class="screenshot-caption">The Response Builder modal with AI-generated solutions and response editor</p>
             </div>
 
-            <div class="step-instructions">
-                <h4><i class="fas fa-list-check"></i> Steps</h4>
-                <ol>
-                    <li>Click any comment to view its detail page</li>
-                    <li>Review the <strong>Expert Panel</strong> discussion for insights</li>
-                    <li>Choose from <strong>Potential Solutions</strong>:
-                        <ul>
-                            <li><span style="color: var(--secondary)">Low effort:</span> Quick acknowledgment</li>
-                            <li><span style="color: var(--accent)">Medium effort:</span> Detailed explanation</li>
-                            <li><span style="color: #EF4444">High effort:</span> New analysis or revision</li>
-                        </ul>
-                    </li>
-                    <li>Click <strong>"Use This"</strong> to apply a solution as your draft</li>
-                    <li>Edit the draft response in the text area</li>
-                    <li>Mark as <strong>Complete</strong> when finalized</li>
-                </ol>
-            </div>
+            <h3>Steps to Review Responses</h3>
+            <ol>
+                <li>Click any comment to view its detail page</li>
+                <li>Review the <strong>Expert Panel</strong> discussion for insights</li>
+                <li>Choose from <strong>Potential Solutions</strong>:
+                    <ul>
+                        <li><span class="badge badge-sage">Low effort</span> Quick acknowledgment</li>
+                        <li><span class="badge badge-ochre">Medium effort</span> Detailed explanation</li>
+                        <li><span class="badge badge-vermillion">High effort</span> New analysis or revision</li>
+                    </ul>
+                </li>
+                <li>Click <strong>"Use This"</strong> to apply a solution as your draft</li>
+                <li>Edit the draft response in the text area</li>
+                <li>Mark as <strong>Complete</strong> when finalized</li>
+            </ol>
 
-            <div class="warning-box">
-                <h5><i class="fas fa-exclamation-triangle"></i> Important</h5>
+            <div class="alert alert-warning">
+                <h5>Important</h5>
                 <p>Always review and edit AI-generated responses. They are drafts to help you get started, not final answers.</p>
             </div>
-        </section>
 
-        <!-- Step 5: Export -->
-        <section class="tutorial-step" id="step5">
-            <div class="step-header">
+            <!-- Step 5: Export -->
+            <h2 id="step5">Step 5: Export Your Responses</h2>
+            <p>Generate a formatted document with all your responses, ready for journal submission.</p>
+
+            <div class="tutorial-step">
                 <div class="step-number">5</div>
-                <h2 class="step-title">Export Your Responses</h2>
+                <div class="step-content">
+                    <h3>Generate Documents</h3>
+                    <p>Export your completed responses in various formats.</p>
+                </div>
             </div>
-            <p class="step-description">Generate a formatted document with all your responses, ready for journal submission.</p>
 
             <div class="screenshot-container">
                 <img src="assets/tutorial/export.png" alt="Export Options">
                 <p class="screenshot-caption">Export your responses as professional documents or data backups</p>
             </div>
 
-            <div class="step-instructions">
-                <h4><i class="fas fa-list-check"></i> Steps</h4>
-                <ol>
-                    <li>Go to the <strong>Dashboard</strong> view</li>
-                    <li>Click <strong>"Export"</strong> dropdown</li>
-                    <li>Choose your format:
-                        <ul>
-                            <li><strong>Word Document:</strong> Formatted DOCX file</li>
-                            <li><strong>Plain Text:</strong> Simple TXT file</li>
-                            <li><strong>JSON:</strong> Structured data for backup</li>
-                        </ul>
-                    </li>
-                    <li>Review the generated document</li>
-                    <li>Submit with your revised manuscript!</li>
-                </ol>
-            </div>
+            <h3>Export Options</h3>
+            <ol>
+                <li>Go to the <strong>Dashboard</strong> view</li>
+                <li>Click <strong>"Export"</strong> dropdown</li>
+                <li>Choose your format:
+                    <ul>
+                        <li><strong>Word Document:</strong> Formatted DOCX file</li>
+                        <li><strong>Plain Text:</strong> Simple TXT file</li>
+                        <li><strong>JSON:</strong> Structured data for backup</li>
+                    </ul>
+                </li>
+                <li>Review the generated document</li>
+                <li>Submit with your revised manuscript!</li>
+            </ol>
 
-            <div class="tip-box">
-                <h5><i class="fas fa-lightbulb"></i> Pro Tip</h5>
+            <div class="alert alert-info">
+                <h5>Pro Tip</h5>
                 <p>Export to JSON periodically to backup your progress. You can reimport this file to restore your work.</p>
             </div>
-        </section>
 
-        <!-- Next Steps -->
-        <section class="next-steps">
-            <h3>You're Ready!</h3>
-            <p>You now know the basics of Rebuttr. Explore these resources to learn more.</p>
-            <div class="next-steps-links">
-                <a href="guides/installation.html"><i class="fas fa-download"></i> Installation Guide</a>
-                <a href="guides/configuration.html"><i class="fas fa-cog"></i> Configuration</a>
-                <a href="guides/troubleshooting.html"><i class="fas fa-wrench"></i> Troubleshooting</a>
-                <a href="api/"><i class="fas fa-code"></i> API Reference</a>
-            </div>
-        </section>
+            <!-- Next Steps -->
+            <h2>Next Steps</h2>
+            <p>You now know the basics of Rebuttr. Explore these resources to learn more:</p>
+            <ul>
+                <li><a href="guides/installation.html">Installation Guide</a> - Detailed setup instructions</li>
+                <li><a href="guides/configuration.html">Configuration</a> - Customize settings</li>
+                <li><a href="guides/troubleshooting.html">Troubleshooting</a> - Common issues and solutions</li>
+                <li><a href="api/">API Reference</a> - For advanced users and developers</li>
+            </ul>
+        </main>
     </div>
 
-    <!-- Footer -->
-    <footer>
+    <footer class="doc-footer">
         <p>
+            <a href="guides/">Documentation</a> |
             <a href="https://github.com/genomewalker/rebuttr">GitHub</a> |
-            <a href="index.html">Home</a> |
-            <a href="guides/">Documentation</a>
-        </p>
-        <p style="margin-top: 1rem; opacity: 0.7; font-size: 0.875rem;">
-            2025 Rebuttr. MIT License.
+            <a href="guides/troubleshooting.html">Troubleshooting</a>
         </p>
     </footer>
+
+    <script>
+        // Nav scroll effect
+        const nav = document.getElementById('nav');
+        window.addEventListener('scroll', () => {
+            nav.classList.toggle('scrolled', window.scrollY > 50);
+        });
+
+        // Copy code functionality
+        function copyCode(btn) {
+            const code = btn.closest('.code-block').querySelector('.code-content').textContent;
+            navigator.clipboard.writeText(code.trim());
+            btn.textContent = 'Copied!';
+            setTimeout(() => btn.textContent = 'Copy', 2000);
+        }
+    </script>
 </body>
 </html>
