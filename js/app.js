@@ -6840,14 +6840,8 @@ Your response:`;
                                     <small>Statistics and progress overview</small>
                                 </span>
                             </a>
-                            <a href="#" onclick="saveProgress(); return false;" class="export-list-item">
-                                <span class="export-list-icon"><i class="fas fa-save"></i></span>
-                                <span class="export-list-text">
-                                    <strong>Save Progress</strong>
-                                    <small>Save to browser storage</small>
-                                </span>
-                            </a>
                         </div>
+                        <p class="export-note">All changes are automatically saved to the database.</p>
                     </section>
 
                     <!-- Response Preview -->

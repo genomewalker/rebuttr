@@ -5599,6 +5599,13 @@ a.task-queue-id:hover {
     color: var(--ink-muted);
 }
 
+.export-note {
+    font-size: var(--text-sm);
+    color: var(--ink-muted);
+    margin-top: var(--sp-3);
+    font-style: italic;
+}
+
 .export-preview-box {
     background: var(--paper);
     border: 1px solid var(--rule);
