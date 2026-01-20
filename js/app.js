@@ -4290,6 +4290,8 @@ Use the "Generate Expert Analysis" button to create insights using OpenCode.
                     comments = comments.filter(c => c.category === currentFilter.value);
                 } else if (currentFilter.type === 'analysis') {
                     comments = comments.filter(c => c.requires_new_analysis === currentFilter.value);
+                } else if (currentFilter.type === 'status') {
+                    comments = comments.filter(c => c.status === currentFilter.value);
                 } else if (currentFilter.type === 'search') {
                     const query = currentFilter.value;
                     comments = comments.filter(c => {
@@ -4333,16 +4335,30 @@ Use the "Generate Expert Analysis" button to create insights using OpenCode.
                     </div>
                     <div class="comments-filter-btns">
                         <button onclick="filterByType('major')"
-                                class="filter-btn major ${currentFilter?.value === 'major' ? 'active' : ''}">
+                                class="filter-btn major ${currentFilter?.type === 'type' && currentFilter?.value === 'major' ? 'active' : ''}">
                             Show Major Only
                         </button>
                         <button onclick="filterByType('minor')"
-                                class="filter-btn minor ${currentFilter?.value === 'minor' ? 'active' : ''}">
+                                class="filter-btn minor ${currentFilter?.type === 'type' && currentFilter?.value === 'minor' ? 'active' : ''}">
                             Show Minor Only
                         </button>
                         <button onclick="clearFilter()"
                                 class="filter-btn all ${!currentFilter ? 'active' : ''}">
                             Show All
+                        </button>
+                    </div>
+                    <div class="comments-filter-btns status-filters">
+                        <button onclick="filterByStatus('completed')"
+                                class="filter-btn completed ${currentFilter?.type === 'status' && currentFilter?.value === 'completed' ? 'active' : ''}">
+                            <i class="fas fa-check-circle"></i> Completed (${allComments.filter(c => c.status === 'completed').length})
+                        </button>
+                        <button onclick="filterByStatus('in_progress')"
+                                class="filter-btn in-progress ${currentFilter?.type === 'status' && currentFilter?.value === 'in_progress' ? 'active' : ''}">
+                            <i class="fas fa-spinner"></i> In Progress (${allComments.filter(c => c.status === 'in_progress').length})
+                        </button>
+                        <button onclick="filterByStatus('pending')"
+                                class="filter-btn pending ${currentFilter?.type === 'status' && currentFilter?.value === 'pending' ? 'active' : ''}">
+                            <i class="fas fa-clock"></i> Pending (${allComments.filter(c => c.status === 'pending').length})
                         </button>
                     </div>
                 </div>
@@ -7014,6 +7030,11 @@ Your response:`;
 
         function filterByAnalysis(value) {
             currentFilter = { type: 'analysis', value: value };
+            setView('comments', true);  // preserve filter
+        }
+
+        function filterByStatus(status) {
+            currentFilter = { type: 'status', value: status };
             setView('comments', true);  // preserve filter
         }
 
