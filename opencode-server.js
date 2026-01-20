@@ -148,23 +148,10 @@ function updatePaperMetadata(paperId, metadata) {
 // Store parsed reviewers and comments in database
 // Normalize comment ID to ensure consistent format (R1.1, R2.3, etc.)
 function normalizeCommentId(id, reviewerNum, commentNum) {
-    if (!id) return `R${reviewerNum}.${commentNum}`;
-
-    // Remove common prefixes like "major-", "minor-", etc.
-    let normalized = id.replace(/^(major|minor|comment|issue)-/i, '');
-
-    // If it doesn't match R#.# pattern, generate a proper one
-    if (!/^R\d+\.\d+$/i.test(normalized)) {
-        // Try to extract any numbers from the ID
-        const match = normalized.match(/(\d+)\.(\d+)/);
-        if (match) {
-            normalized = `R${match[1]}.${match[2]}`;
-        } else {
-            normalized = `R${reviewerNum}.${commentNum}`;
-        }
-    }
-
-    return normalized;
+    // Always use position-based IDs (R{reviewerNum}.{commentNum}) for consistency
+    // This avoids conflicts where explicit IDs like "R4.4" appear at the wrong position
+    // or where IDs like "major"/"minor" get normalized to position-based IDs that conflict
+    return `R${reviewerNum}.${commentNum}`;
 }
 
 // Extract line references from comment text (e.g., "Line 45", "Lines 97-99", "L45")
