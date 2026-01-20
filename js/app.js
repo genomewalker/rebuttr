@@ -6981,19 +6981,41 @@ Your response:`;
         }
 
         function generateResponsePreview() {
+            const allComments = getAllComments();
+            const withResponse = allComments.filter(c => c.draft_response);
+
             let preview = '<h2>Response to Reviewers</h2>';
+            preview += `<p class="response-preview-stats"><strong>${withResponse.length}</strong> of <strong>${allComments.length}</strong> comments have responses drafted</p>`;
+
             reviewData.reviewers.forEach(reviewer => {
-                preview += `<h3>${reviewer.name}</h3>`;
-                reviewer.comments.forEach(comment => {
-                    if (comment.draft_response) {
+                const reviewerComments = reviewer.comments || [];
+                const reviewerWithResponse = reviewerComments.filter(c => c.draft_response).length;
+
+                preview += `<h3>${reviewer.name} <span class="response-count">(${reviewerWithResponse}/${reviewerComments.length} responses)</span></h3>`;
+
+                if (reviewerComments.length === 0) {
+                    preview += `<p class="no-comments">No comments from this reviewer</p>`;
+                } else {
+                    reviewer.comments.forEach(comment => {
+                        const statusIcon = comment.status === 'completed' ? '✓' : comment.status === 'in_progress' ? '◐' : '○';
+                        const typeClass = comment.type === 'major' ? 'major' : 'minor';
+
                         preview += `
-                            <div class="mb-4">
-                                <p><strong>Comment ${comment.id}:</strong> ${comment.original_text.substring(0, 100)}...</p>
-                                <p><em>Response:</em> ${comment.draft_response}</p>
+                            <div class="response-preview-item ${typeClass} ${comment.draft_response ? 'has-response' : 'no-response'}">
+                                <p class="response-preview-header">
+                                    <span class="status-icon">${statusIcon}</span>
+                                    <strong>Comment ${comment.id}</strong>
+                                    <span class="type-badge ${typeClass}">${comment.type}</span>
+                                </p>
+                                <p class="response-preview-comment">${(comment.original_text || '').substring(0, 150)}${(comment.original_text || '').length > 150 ? '...' : ''}</p>
+                                ${comment.draft_response
+                                    ? `<div class="response-preview-response"><strong>Response:</strong> ${comment.draft_response}</div>`
+                                    : `<p class="response-preview-pending"><em>No response drafted yet</em></p>`
+                                }
                             </div>
                         `;
-                    }
-                });
+                    });
+                }
             });
             return preview;
         }
