@@ -441,8 +441,8 @@ function storeParsedData(paperId, parsedData, manuscriptText = null) {
 
         // Insert reviewers and their comments
         const insertReviewer = db.prepare(`
-            INSERT INTO reviewers (id, paper_id, name, expertise, overall_sentiment, source_file)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO reviewers (id, paper_id, name, expertise, overall_sentiment, source_file, original_document)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         `);
 
         const insertComment = db.prepare(`
@@ -464,7 +464,8 @@ function storeParsedData(paperId, parsedData, manuscriptText = null) {
                 reviewer.name || 'Unknown Reviewer',
                 reviewer.expertise || '',
                 reviewer.overall_sentiment || '',
-                reviewer.source_file || ''
+                reviewer.source_file || '',
+                reviewer.original_document || ''
             );
 
             // Insert comments
@@ -1070,6 +1071,12 @@ const MIGRATIONS = {
         description: 'Add potential_solutions column to expert_discussions',
         up: `
             ALTER TABLE expert_discussions ADD COLUMN potential_solutions TEXT DEFAULT '[]';
+        `
+    },
+    15: {
+        description: 'Add original_document column to reviewers table for collaboration export',
+        up: `
+            ALTER TABLE reviewers ADD COLUMN original_document TEXT;
         `
     }
 };
@@ -3505,6 +3512,7 @@ function startApiServer(port = 3001) {
                     expertise: r.expertise || '',
                     overall_sentiment: r.overall_sentiment || '',
                     source_file: r.source_file || '',
+                    original_document: r.original_document || '',
                     comments: allComments
                         .filter(c => c.reviewer_id === r.id)
                         .map(c => ({
@@ -4013,17 +4021,17 @@ function startApiServer(port = 3001) {
                         pageBreakBefore: true
                     }));
 
-                    // ========== PART 2: COMPLETE REVIEWER DOCUMENT WITH HIGHLIGHTS ==========
+                    // ========== PART 2: ORIGINAL REVIEWER DOCUMENT WITH HIGHLIGHTS ==========
 
                     children.push(new Paragraph({
                         heading: HeadingLevel.HEADING_1,
-                        children: [new TextRun({ text: "Complete Reviewer Comments", bold: true, size: 32 })],
+                        children: [new TextRun({ text: "Original Reviewer Document", bold: true, size: 32 })],
                         spacing: { after: 200 }
                     }));
 
                     children.push(new Paragraph({
                         children: [new TextRun({
-                            text: "Comments highlighted in yellow are those selected for review above.",
+                            text: "Selected comments are highlighted in yellow.",
                             size: 22,
                             italics: true,
                             color: '666666'
@@ -4031,10 +4039,19 @@ function startApiServer(port = 3001) {
                         spacing: { after: 400 }
                     }));
 
-                    // Process all reviewers and all comments, highlighting selected ones
+                    // Get selected comment texts for highlighting
+                    const selectedTexts = [];
                     for (const reviewer of exportData.reviewers || []) {
-                        if (!reviewer.comments || reviewer.comments.length === 0) continue;
+                        for (const comment of reviewer.comments || []) {
+                            if (comment.isSelected && comment.original_text) {
+                                // Normalize the text for matching (first 100 chars to handle truncation)
+                                selectedTexts.push(comment.original_text.trim().substring(0, 100));
+                            }
+                        }
+                    }
 
+                    // Process each reviewer's original document
+                    for (const reviewer of exportData.reviewers || []) {
                         // Reviewer header
                         children.push(new Paragraph({
                             heading: HeadingLevel.HEADING_2,
@@ -4042,47 +4059,68 @@ function startApiServer(port = 3001) {
                             spacing: { before: 400, after: 200 }
                         }));
 
-                        // All comments from this reviewer
-                        for (const comment of reviewer.comments) {
-                            const isSelected = comment.isSelected;
-                            const highlightColor = isSelected ? 'FFFF00' : null; // Yellow highlight
+                        // Use original document if available, otherwise fall back to extracted comments
+                        const docText = reviewer.original_document || '';
 
-                            // Comment ID header
+                        if (docText.trim()) {
+                            // Split into paragraphs and check each for selected comments
+                            const paragraphs = docText.split(/\n\n+/);
+
+                            for (const para of paragraphs) {
+                                if (!para.trim()) continue;
+
+                                // Check if this paragraph contains any selected comment
+                                const paraStart = para.trim().substring(0, 100);
+                                const isHighlighted = selectedTexts.some(selText =>
+                                    para.includes(selText.substring(0, 50)) ||
+                                    selText.includes(paraStart.substring(0, 50))
+                                );
+
+                                // Split paragraph into lines
+                                const lines = para.split('\n');
+                                for (const line of lines) {
+                                    if (line.trim()) {
+                                        children.push(new Paragraph({
+                                            children: [new TextRun({
+                                                text: line,
+                                                size: 22,
+                                                highlight: isHighlighted ? 'yellow' : undefined
+                                            })],
+                                            spacing: { after: 50 }
+                                        }));
+                                    }
+                                }
+                                children.push(new Paragraph({ spacing: { after: 100 } }));
+                            }
+                        } else {
+                            // Fallback: use extracted comments if no original document
                             children.push(new Paragraph({
-                                children: [
-                                    new TextRun({
-                                        text: `${comment.id}`,
-                                        bold: true,
-                                        size: 22,
-                                        highlight: isSelected ? 'yellow' : undefined
-                                    }),
-                                    new TextRun({ text: ' ', size: 22 }),
-                                    comment.type === 'major'
-                                        ? new TextRun({ text: '[MAJOR]', bold: true, color: 'DC2626', size: 18 })
-                                        : new TextRun({ text: '[minor]', color: '6B7280', size: 18 }),
-                                    isSelected
-                                        ? new TextRun({ text: ' ★ SELECTED FOR REVIEW', bold: true, color: '2563EB', size: 18 })
-                                        : new TextRun({ text: '' })
-                                ],
-                                spacing: { before: 200, after: 100 }
+                                children: [new TextRun({
+                                    text: "(Original document not available - showing extracted comments)",
+                                    size: 20,
+                                    italics: true,
+                                    color: '999999'
+                                })],
+                                spacing: { after: 200 }
                             }));
 
-                            // Comment text
-                            const commentLines = (comment.original_text || '').split('\n');
-                            for (const line of commentLines) {
-                                if (line.trim()) {
-                                    children.push(new Paragraph({
-                                        children: [new TextRun({
-                                            text: line,
-                                            size: 22,
-                                            highlight: isSelected ? 'yellow' : undefined
-                                        })],
-                                        spacing: { after: 50 }
-                                    }));
+                            for (const comment of reviewer.comments || []) {
+                                const isSelected = comment.isSelected;
+                                const commentLines = (comment.original_text || '').split('\n');
+                                for (const line of commentLines) {
+                                    if (line.trim()) {
+                                        children.push(new Paragraph({
+                                            children: [new TextRun({
+                                                text: line,
+                                                size: 22,
+                                                highlight: isSelected ? 'yellow' : undefined
+                                            })],
+                                            spacing: { after: 50 }
+                                        }));
+                                    }
                                 }
+                                children.push(new Paragraph({ spacing: { after: 150 } }));
                             }
-
-                            children.push(new Paragraph({ spacing: { after: 150 } }));
                         }
                     }
 

@@ -1310,6 +1310,8 @@ Number sequentially: ${reviewerId}-1, ${reviewerId}-2, etc.`;
                     hideOpenCodeLoading('extract-comments', { success: false, message: 'Could not parse JSON from response' });
                     throw new Error('Could not parse JSON from response');
                 }
+                // Store the original document text for collaboration export
+                extracted.original_document = rawText;
                 extractedCommentsData = extracted;
 
                 // Show extracted comments
@@ -2300,6 +2302,7 @@ Before responding, verify you have:
                 name: extracted.reviewer?.name || reviewerName,
                 expertise: extracted.reviewer?.expertise || 'Unknown',
                 overall_assessment: extracted.reviewer?.overall_assessment || '',
+                original_document: content,
                 comments: (extracted.comments || []).map(c => ({
                     ...c,
                     status: 'pending',
@@ -2431,6 +2434,7 @@ Before responding, verify you have:
                 name: extractedCommentsData.reviewer?.name || 'Referee #1',
                 expertise: extractedCommentsData.reviewer?.expertise || 'Unknown',
                 overall_assessment: extractedCommentsData.reviewer?.overall_assessment || '',
+                original_document: extractedCommentsData.original_document || '',
                 comments: extractedCommentsData.comments.map(c => ({
                     ...c,
                     status: 'pending',
@@ -10193,6 +10197,7 @@ Provide expert guidance based on the manuscript context you have loaded. Be scie
                     reviewers: reviewData.reviewers.map(r => ({
                         name: r.name,
                         expertise: r.expertise || '',
+                        original_document: r.original_document || '',
                         comments: r.comments.map(c => {
                             const expertData = expertDiscussions?.expert_discussions?.[c.id];
                             const response = c.draft_response || c.recommended_response || expertData?.recommended_response;
