@@ -3027,7 +3027,8 @@ async function prepareFilesForContext(paperId, processedFiles, tokenBudget, outp
 }
 
 // Convert docx/xlsx files to text using pandoc (avoids /tmp permission issues in OpenCode skills)
-async function convertToText(filePath, outputDir) {
+// If docId is provided, updates the document record with the converted path
+async function convertToText(filePath, outputDir, docId = null) {
     const ext = path.extname(filePath).toLowerCase();
     const baseName = path.basename(filePath, ext);
     const outputPath = path.join(outputDir, `${baseName}.md`);
@@ -3042,6 +3043,12 @@ async function convertToText(filePath, outputDir) {
                 timeout: 60000
             });
             log(`[CONVERT] Converted ${path.basename(filePath)} to markdown`);
+
+            // Update document record with converted path
+            if (docId) {
+                updateDocumentConverted(docId, `${baseName}.md`, outputPath);
+            }
+
             return outputPath;
         } catch (err) {
             log(`[CONVERT] Failed to convert ${path.basename(filePath)}: ${err.message}`, 'WARN');
@@ -3062,6 +3069,12 @@ async function convertToText(filePath, outputDir) {
             fs.writeFileSync(outputPath, markdown);
             fs.unlinkSync(txtPath); // Remove intermediate txt file
             log(`[CONVERT] Converted ${path.basename(filePath)} (PDF) to markdown`);
+
+            // Update document record with converted path
+            if (docId) {
+                updateDocumentConverted(docId, `${baseName}.md`, outputPath);
+            }
+
             return outputPath;
         } catch (err) {
             log(`[CONVERT] Failed to convert PDF ${path.basename(filePath)}: ${err.message}`, 'WARN');
@@ -3109,6 +3122,12 @@ async function convertToText(filePath, outputDir) {
             // Write markdown file
             fs.writeFileSync(outputPath, markdown);
             log(`[CONVERT] Converted ${path.basename(filePath)} to markdown (${workbook.SheetNames.length} sheets)`);
+
+            // Update document record with converted path
+            if (docId) {
+                updateDocumentConverted(docId, `${baseName}.md`, outputPath);
+            }
+
             return outputPath;
         } catch (err) {
             log(`[CONVERT] Failed to convert Excel ${path.basename(filePath)}: ${err.message}`, 'WARN');
@@ -4069,112 +4088,84 @@ function startApiServer(port = 3001) {
                     const selectedIds = exportData.selectedCommentIds || [];
                     const children = [];
 
-                    // Try to load original documents from database and file system
+                    // Load original review documents from database
                     const paperDir = path.join(PROJECT_FOLDER || BASE_DIR, 'papers', paperId);
 
-                    // First, try to get review documents from database
+                    // Get review documents from database (category determines what's a review, not filename)
                     const reviewDocs = getDocuments(paperId, 'reviews');
                     log(`Found ${reviewDocs.length} review documents in DB for paper ${paperId}`);
 
-                    // Build a list of available review files (from DB and file system)
-                    let allReviewFiles = [];
-
-                    // Add DB-tracked documents
+                    // Build list of readable review files
+                    let reviewFiles = [];
                     for (const doc of reviewDocs) {
-                        // Prefer converted file if available
-                        const filePath = doc.converted_path || doc.file_path;
-                        if (fs.existsSync(filePath)) {
-                            allReviewFiles.push({
-                                name: path.basename(filePath),
-                                dir: path.dirname(filePath),
-                                fullPath: filePath,
-                                docId: doc.id,
-                                originalName: doc.original_filename
-                            });
-                        } else {
-                            // Try to find converted .md file in paper root
-                            const baseName = path.basename(doc.original_filename, path.extname(doc.original_filename));
-                            const mdPath = path.join(paperDir, `${baseName}.md`);
-                            if (fs.existsSync(mdPath)) {
-                                allReviewFiles.push({
-                                    name: `${baseName}.md`,
-                                    dir: paperDir,
-                                    fullPath: mdPath,
+                        // Check multiple possible locations for the file
+                        const possiblePaths = [
+                            doc.converted_path,                                           // DB converted path
+                            doc.file_path,                                                // DB original path
+                            path.join(paperDir, path.basename(doc.original_filename, path.extname(doc.original_filename)) + '.md'),  // Converted in paper root
+                            path.join(paperDir, 'reviews', doc.original_filename),        // Original in reviews/
+                        ].filter(Boolean);
+
+                        for (const p of possiblePaths) {
+                            if (fs.existsSync(p) && (p.endsWith('.md') || p.endsWith('.txt'))) {
+                                reviewFiles.push({
+                                    fullPath: p,
                                     docId: doc.id,
                                     originalName: doc.original_filename
                                 });
+                                log(`Found review file: ${p}`);
+                                break;
                             }
                         }
                     }
 
-                    // Also scan file system for review files not in DB
-                    // Check paper root directory (where converted .md files are stored)
-                    if (fs.existsSync(paperDir)) {
-                        const rootFiles = fs.readdirSync(paperDir).filter(f =>
-                            (f.endsWith('.txt') || f.endsWith('.md')) &&
-                            (f.toLowerCase().includes('review') || f.toLowerCase().includes('referee'))
-                        );
-                        for (const f of rootFiles) {
-                            const fullPath = path.join(paperDir, f);
-                            // Only add if not already tracked
-                            if (!allReviewFiles.some(rf => rf.fullPath === fullPath)) {
-                                allReviewFiles.push({ name: f, dir: paperDir, fullPath });
+                    // If no files from DB, scan file system as fallback (for legacy papers)
+                    if (reviewFiles.length === 0) {
+                        log(`No review docs in DB, scanning file system...`);
+
+                        // Check paper root for any .md files
+                        if (fs.existsSync(paperDir)) {
+                            const mdFiles = fs.readdirSync(paperDir).filter(f =>
+                                f.endsWith('.md') && !f.startsWith('_') && !f.startsWith('.')
+                            );
+                            for (const f of mdFiles) {
+                                reviewFiles.push({ fullPath: path.join(paperDir, f), originalName: f });
+                            }
+                        }
+
+                        // Check reviews subdirectory
+                        const reviewsDir = path.join(paperDir, 'reviews');
+                        if (fs.existsSync(reviewsDir)) {
+                            const subFiles = fs.readdirSync(reviewsDir).filter(f =>
+                                f.endsWith('.md') || f.endsWith('.txt')
+                            );
+                            for (const f of subFiles) {
+                                reviewFiles.push({ fullPath: path.join(reviewsDir, f), originalName: f });
                             }
                         }
                     }
 
-                    // Check reviews subdirectory
-                    const reviewsDir = path.join(paperDir, 'reviews');
-                    if (fs.existsSync(reviewsDir)) {
-                        const subFiles = fs.readdirSync(reviewsDir).filter(f =>
-                            f.endsWith('.txt') || f.endsWith('.md')
-                        );
-                        for (const f of subFiles) {
-                            const fullPath = path.join(reviewsDir, f);
-                            if (!allReviewFiles.some(rf => rf.fullPath === fullPath)) {
-                                allReviewFiles.push({ name: f, dir: reviewsDir, fullPath });
+                    log(`Total review files available: ${reviewFiles.length}`);
+
+                    // Load review content for reviewers
+                    if (reviewFiles.length > 0) {
+                        // Read all review files and combine them
+                        let combinedReviewContent = '';
+                        for (const rf of reviewFiles) {
+                            try {
+                                const content = fs.readFileSync(rf.fullPath, 'utf-8');
+                                combinedReviewContent += content + '\n\n';
+                                log(`Loaded: ${rf.originalName || path.basename(rf.fullPath)}`);
+                            } catch (e) {
+                                log(`Could not read ${rf.fullPath}: ${e.message}`, 'WARN');
                             }
                         }
-                    }
 
-                    log(`Found ${allReviewFiles.length} potential review files: ${allReviewFiles.map(f => f.name).join(', ')}`);
-
-                    // Match files to reviewers
-                    if (allReviewFiles.length > 0) {
+                        // Assign to all reviewers (they share the same source document)
                         for (const reviewer of exportData.reviewers || []) {
-                            if (!reviewer.original_document) {
-                                let matchedFile = null;
-
-                                // First try document_id match
-                                if (reviewer.document_id) {
-                                    matchedFile = allReviewFiles.find(f => f.docId === reviewer.document_id);
-                                }
-
-                                // Try source_file match
-                                if (!matchedFile && reviewer.source_file) {
-                                    const baseName = path.basename(reviewer.source_file, path.extname(reviewer.source_file));
-                                    matchedFile = allReviewFiles.find(f =>
-                                        f.name.includes(baseName) ||
-                                        baseName.includes(path.basename(f.name, path.extname(f.name))) ||
-                                        (f.originalName && f.originalName.includes(baseName))
-                                    );
-                                }
-
-                                // If only one review file, use it for all (common case: combined review document)
-                                if (!matchedFile && allReviewFiles.length === 1) {
-                                    matchedFile = allReviewFiles[0];
-                                    log(`Using single review file for all reviewers: ${matchedFile.name}`);
-                                }
-
-                                // Read the matched file
-                                if (matchedFile) {
-                                    try {
-                                        reviewer.original_document = fs.readFileSync(matchedFile.fullPath, 'utf-8');
-                                        log(`Loaded original document for ${reviewer.name} from ${matchedFile.name}`);
-                                    } catch (e) {
-                                        log(`Could not read ${matchedFile.name}: ${e.message}`, 'WARN');
-                                    }
-                                }
+                            if (!reviewer.original_document && combinedReviewContent) {
+                                reviewer.original_document = combinedReviewContent;
+                                log(`Assigned review document to ${reviewer.name}`);
                             }
                         }
                     }
@@ -4669,6 +4660,15 @@ function startApiServer(port = 3001) {
                     const savedFiles = [];
                     const categories = ['manuscript', 'reviews', 'supplementary'];
 
+                    // Get documents from DB to match with files
+                    const allDocs = getDocuments(paperId);
+                    const docsByPath = {};
+                    for (const doc of allDocs) {
+                        docsByPath[doc.file_path] = doc.id;
+                        // Also index by filename for fallback matching
+                        docsByPath[doc.original_filename] = doc.id;
+                    }
+
                     for (const category of categories) {
                         const categoryDir = path.join(paperDir, category);
                         if (fs.existsSync(categoryDir)) {
@@ -4677,11 +4677,15 @@ function startApiServer(port = 3001) {
                                 if (file.startsWith('.')) continue; // Skip hidden files
                                 const filePath = path.join(categoryDir, file);
                                 if (fs.statSync(filePath).isFile()) {
+                                    // Try to find docId from database
+                                    const docId = docsByPath[filePath] || docsByPath[file] || null;
+
                                     savedFiles.push({
                                         path: filePath,
                                         name: file,
                                         category: category === 'reviews' ? 'review' : category,
-                                        ext: path.extname(file).toLowerCase()
+                                        ext: path.extname(file).toLowerCase(),
+                                        docId: docId
                                     });
                                 }
                             }
@@ -4881,7 +4885,7 @@ function startApiServer(port = 3001) {
                         updateProcessingJob(jobId, {
                             log: `[${fileIndex}/${totalFiles}] Converting ${fileType} to markdown...`
                         });
-                        fileToProcess = await convertToText(file.path, paperDir);
+                        fileToProcess = await convertToText(file.path, paperDir, file.docId);
                         isConverted = fileToProcess !== file.path;
                     }
 
@@ -4935,7 +4939,7 @@ function startApiServer(port = 3001) {
                             progress: Math.round((fileIndex / (totalFiles + 1)) * 100),
                             log: `[${fileIndex}/${totalFiles}] Converting ${fileType} to markdown...`
                         });
-                        fileToProcess = await convertToText(file.path, paperDir);
+                        fileToProcess = await convertToText(file.path, paperDir, file.docId);
                         isConverted = fileToProcess !== file.path;
                     }
 
@@ -4967,7 +4971,7 @@ function startApiServer(port = 3001) {
                         updateProcessingJob(jobId, {
                             log: `[${fileIndex}/${totalFiles}] Converting ${fileType} to markdown...`
                         });
-                        fileToProcess = await convertToText(file.path, paperDir);
+                        fileToProcess = await convertToText(file.path, paperDir, file.docId);
                         isConverted = fileToProcess !== file.path;
                     }
 
