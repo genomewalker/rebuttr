@@ -59,6 +59,7 @@
                     <li class="nav-item"><button onclick="setView('taskqueue')" class="nav-btn" data-view="taskqueue"><i class="fas fa-tasks"></i><span>Task Queue</span></button></li>
                     <li class="nav-item"><button onclick="setView('comments')" class="nav-btn" data-view="comments"><i class="fas fa-comments"></i><span>All Comments</span></button></li>
                     <li class="nav-item"><button onclick="setView('byreviewer')" class="nav-btn" data-view="byreviewer"><i class="fas fa-users"></i><span>By Reviewer</span></button></li>
+                    <li class="nav-item"><button onclick="setView('tags')" class="nav-btn" data-view="tags"><i class="fas fa-tags"></i><span>Tags</span></button></li>
                     <li class="nav-item"><button onclick="setView('agents')" class="nav-btn" data-view="agents"><i class="fas fa-robot"></i><span>AI Agents</span></button></li>
                     <li class="nav-item"><button onclick="setView('experts')" class="nav-btn" data-view="experts"><i class="fas fa-microscope"></i><span>Expert Insights</span></button></li>
                     <li class="nav-item"><button onclick="setView('export')" class="nav-btn" data-view="export"><i class="fas fa-file-export"></i><span>Export</span></button></li>
@@ -91,7 +92,111 @@
                     <button onclick="filterByType('major')" class="nav-btn"><i class="fas fa-exclamation-circle" style="color: var(--purple);"></i>Major Comments</button>
                 </div>
             </div>
+
+            <!-- Top Tags Quick Filter -->
+            <div class="sidebar-section" id="top-tags-section">
+                <div class="flex items-center justify-between">
+                    <h3 class="section-title">Top Tags</h3>
+                    <button onclick="openTagAdminPanel()" class="btn-icon-sm" title="Manage Tags"><i class="fas fa-cog"></i></button>
+                </div>
+                <div id="top-tags-list" class="flex flex-col gap-1">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
         </aside>
+
+        <!-- Tag Admin Slide-out Panel -->
+        <div id="tag-admin-panel" class="slide-panel hidden">
+            <div class="slide-panel-header">
+                <h3><i class="fas fa-tags"></i> Tag Administration</h3>
+                <button onclick="closeTagAdminPanel()" class="btn-icon"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="slide-panel-content">
+                <!-- Stats Cards -->
+                <div class="tag-admin-stats" id="tag-admin-stats">
+                    <!-- Populated dynamically -->
+                </div>
+
+                <!-- Add New Tag -->
+                <div class="tag-admin-section">
+                    <h4>Add New Tag</h4>
+                    <div class="flex gap-2">
+                        <input type="text" id="new-tag-input" class="form-input flex-1" placeholder="tag-name" onkeydown="if(event.key==='Enter')addNewGlobalTag()">
+                        <button onclick="addNewGlobalTag()" class="btn btn-sm btn-primary"><i class="fas fa-plus"></i></button>
+                    </div>
+                </div>
+
+                <!-- Bulk AI Tagging -->
+                <div class="tag-admin-section">
+                    <h4>AI Bulk Tagging</h4>
+                    <p class="text-muted text-sm mb-2">Automatically suggest tags for all comments</p>
+                    <button onclick="startBulkAITagging()" id="bulk-ai-tag-btn" class="btn btn-primary w-full">
+                        <i class="fas fa-magic"></i> Tag All Comments with AI
+                    </button>
+                </div>
+
+                <!-- Danger Zone -->
+                <div class="tag-admin-section">
+                    <h4>Reset</h4>
+                    <button onclick="clearAllTags()" class="btn btn-ghost btn-danger-outline w-full">
+                        <i class="fas fa-trash"></i> Clear All Tags
+                    </button>
+                </div>
+
+                <!-- All Tags List -->
+                <div class="tag-admin-section">
+                    <h4>All Tags <span id="tag-count-badge" class="badge badge-secondary">0</span></h4>
+                    <div id="tag-admin-list" class="tag-admin-list">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tag Admin Overlay -->
+        <div id="tag-admin-overlay" class="slide-panel-overlay hidden" onclick="closeTagAdminPanel()"></div>
+
+        <!-- Bulk Tagging Progress Modal -->
+        <div id="bulk-tag-modal" class="modal-overlay hidden">
+            <div class="bulk-tag-modal-content">
+                <div class="bulk-tag-modal-header">
+                    <i class="fas fa-magic"></i>
+                    <h3>AI Bulk Tagging</h3>
+                </div>
+                <div class="bulk-tag-modal-body">
+                    <div class="bulk-tag-progress-ring">
+                        <svg viewBox="0 0 100 100">
+                            <circle class="progress-ring-bg" cx="50" cy="50" r="45"/>
+                            <circle class="progress-ring-fill" id="progress-ring-circle" cx="50" cy="50" r="45"/>
+                        </svg>
+                        <div class="progress-ring-text">
+                            <span id="bulk-tag-percent">0%</span>
+                        </div>
+                    </div>
+                    <div class="bulk-tag-details">
+                        <p id="bulk-tag-current" class="bulk-tag-current">Initializing...</p>
+                        <div class="bulk-tag-counts">
+                            <span><i class="fas fa-comment"></i> <span id="bulk-tag-processed">0</span> / <span id="bulk-tag-total">0</span> comments</span>
+                            <span><i class="fas fa-tag"></i> <span id="bulk-tag-unique">0</span> unique tags</span>
+                        </div>
+                    </div>
+                    <div class="bulk-tag-log" id="bulk-tag-log">
+                        <!-- Log entries appear here -->
+                    </div>
+                </div>
+                <div class="bulk-tag-modal-footer">
+                    <button onclick="handleBulkTagAction()" id="bulk-tag-action-btn" class="btn btn-ghost">
+                        <i class="fas fa-window-minimize"></i> Run in Background
+                    </button>
+                    <button onclick="cancelBulkTagging()" id="bulk-tag-cancel-btn" class="btn btn-ghost" style="color: var(--vermillion);">
+                        <i class="fas fa-stop"></i> Stop
+                    </button>
+                    <button onclick="closeBulkTagModal()" id="bulk-tag-done-btn" class="btn btn-primary hidden">
+                        <i class="fas fa-check"></i> Done
+                    </button>
+                </div>
+            </div>
+        </div>
 
         <!-- Main Content -->
         <main class="main-content">
@@ -356,8 +461,8 @@
         </button>
 
         <!-- Processing Status (shows spinner when active, click to expand) -->
-        <button id="processing-btn" class="bottom-bar-btn hidden" onclick="toggleProcessingPanel()" title="Background tasks">
-            <i class="fas fa-circle-notch fa-spin"></i>
+        <button id="processing-btn" class="bottom-bar-btn hidden" onclick="toggleProcessingPanel()" title="AI Processing">
+            <i id="processing-icon" class="fas fa-circle-notch fa-spin"></i>
             <span id="processing-count" class="processing-badge">0</span>
         </button>
 

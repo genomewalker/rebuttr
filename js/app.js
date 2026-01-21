@@ -14,6 +14,191 @@ const API_BASE = 'http://localhost:3001';
             return div.innerHTML;
         }
 
+        // Normalize text for comparison (handles HTML entities, whitespace, etc.)
+        function normalizeTextForComparison(text) {
+            if (!text) return '';
+            // Decode HTML entities
+            const temp = document.createElement('div');
+            temp.innerHTML = text;
+            let decoded = temp.textContent || temp.innerText || '';
+            // Normalize whitespace and trim
+            return decoded.trim().replace(/\s+/g, ' ').toLowerCase();
+        }
+
+        // Validate that expert data matches the actual comment text
+        // Uses fuzzy matching - text must be at least 80% similar
+        function validateExpertData(expertData, comment) {
+            // If no reviewer_comment stored, skip validation (legacy data)
+            if (!expertData?.reviewer_comment) return true;
+            if (!comment?.original_text) return false;
+
+            const storedText = normalizeTextForComparison(expertData.reviewer_comment);
+            const actualText = normalizeTextForComparison(comment.original_text);
+
+            // Exact match after normalization
+            if (storedText === actualText) return true;
+
+            // Check if one starts with the other (truncation tolerance)
+            if (storedText.startsWith(actualText.substring(0, 100)) ||
+                actualText.startsWith(storedText.substring(0, 100))) {
+                return true;
+            }
+
+            return false;
+        }
+
+        // Get validated expert data for a comment (returns null if clearly mismatched)
+        function getValidatedExpertData(commentId, comment) {
+            const rawData = expertDiscussions?.expert_discussions?.[commentId];
+            if (!rawData) return null;
+            if (!validateExpertData(rawData, comment)) {
+                console.warn(`Expert data mismatch for ${commentId} - text doesn't match`);
+                return null;
+            }
+            return rawData;
+        }
+
+        // Normalize solution data to handle both string and object formats
+        function normalizeSolution(sol, idx) {
+            if (typeof sol === 'string') {
+                return {
+                    title: `Solution ${idx + 1}`,
+                    effort: 'MEDIUM',
+                    response: sol
+                };
+            }
+            return {
+                title: sol.title || `Solution ${idx + 1}`,
+                effort: sol.effort || 'MEDIUM',
+                response: sol.response || sol.text || sol.description || String(sol)
+            };
+        }
+
+        // Attempt to repair common JSON errors from AI responses
+        function repairJson(jsonStr) {
+            let repaired = jsonStr;
+
+            // Fix 0: Quote unquoted property names (e.g., {name: "value"} -> {"name": "value"})
+            // This handles JavaScript-style object literals
+            repaired = repaired.replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":');
+
+            // Fix 1: Remove trailing commas before ] or }
+            repaired = repaired.replace(/,(\s*[\]\}])/g, '$1');
+
+            // Fix 2: Add missing commas between array elements (e.g., "value" "next" or } {)
+            repaired = repaired.replace(/(")\s*\n\s*(")/g, '$1,\n$2');
+            repaired = repaired.replace(/(")\s+(")/g, '$1, $2');
+            repaired = repaired.replace(/(\})\s*\n\s*(\{)/g, '$1,\n$2');
+            repaired = repaired.replace(/(\})\s+(\{)/g, '$1, $2');
+            repaired = repaired.replace(/(\])\s*\n\s*(\[)/g, '$1,\n$2');
+
+            // Fix 3: Add missing commas after values before keys (e.g., "value"\n"key":)
+            repaired = repaired.replace(/(["}\]\d])\s*\n\s*("[\w]+"\s*:)/g, '$1,\n$2');
+
+            // Fix 4: Fix unescaped newlines within strings (replace with \n)
+            // This is tricky - we need to find strings with actual newlines
+            repaired = repaired.replace(/"([^"]*)\n([^"]*)"/g, (match, p1, p2) => {
+                // Only fix if it looks like a string value, not a structural break
+                if (!p1.includes(':') && !p2.startsWith('{')) {
+                    return `"${p1}\\n${p2}"`;
+                }
+                return match;
+            });
+
+            // Fix 5: Replace single quotes with double quotes for keys/values
+            // Only do this for obvious JSON patterns like 'key': or : 'value'
+            repaired = repaired.replace(/'([\w]+)'\s*:/g, '"$1":');
+            repaired = repaired.replace(/:\s*'([^']+)'/g, ': "$1"');
+
+            return repaired;
+        }
+
+        // Robust JSON extraction from AI response
+        // Handles markdown code blocks, nested objects, and malformed responses
+        function extractJsonFromResponse(response) {
+            if (!response) return null;
+
+            // Try to find JSON in markdown code block first
+            const codeBlockMatch = response.match(/```(?:json)?\s*([\s\S]*?)```/);
+            if (codeBlockMatch) {
+                const jsonContent = codeBlockMatch[1].trim();
+                try {
+                    return JSON.parse(jsonContent);
+                } catch (e) {
+                    // Try to repair and parse again
+                    try {
+                        const repaired = repairJson(jsonContent);
+                        return JSON.parse(repaired);
+                    } catch (e2) {
+                        console.warn('JSON repair in code block failed:', e2.message);
+                        // Continue to other methods
+                    }
+                }
+            }
+
+            // Find the first { and try to parse from there
+            const firstBrace = response.indexOf('{');
+            if (firstBrace === -1) return null;
+
+            // Try parsing with increasing substrings to find valid JSON
+            let depth = 0;
+            let inString = false;
+            let escape = false;
+
+            for (let i = firstBrace; i < response.length; i++) {
+                const char = response[i];
+
+                if (escape) {
+                    escape = false;
+                    continue;
+                }
+
+                if (char === '\\' && inString) {
+                    escape = true;
+                    continue;
+                }
+
+                if (char === '"' && !escape) {
+                    inString = !inString;
+                    continue;
+                }
+
+                if (!inString) {
+                    if (char === '{') depth++;
+                    else if (char === '}') {
+                        depth--;
+                        if (depth === 0) {
+                            // Found complete JSON object
+                            const jsonStr = response.substring(firstBrace, i + 1);
+                            try {
+                                return JSON.parse(jsonStr);
+                            } catch (e) {
+                                // Try to repair the JSON
+                                console.warn('Initial JSON parse failed, attempting repair...');
+                                try {
+                                    const repaired = repairJson(jsonStr);
+                                    const result = JSON.parse(repaired);
+                                    console.log('JSON repair successful');
+                                    return result;
+                                } catch (e2) {
+                                    console.warn('JSON repair failed:', e2.message);
+                                    // Log the problematic area for debugging
+                                    const errorMatch = e.message.match(/position (\d+)/);
+                                    if (errorMatch) {
+                                        const pos = parseInt(errorMatch[1]);
+                                        console.warn('Problem area:', jsonStr.substring(Math.max(0, pos - 50), pos + 50));
+                                    }
+                                    return null;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            return null;
+        }
+
         // Check for paper ID in URL - redirect to landing if not present
         (function() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -65,21 +250,73 @@ const API_BASE = 'http://localhost:3001';
         const activeLoadingIndicators = new Map();
 
         /**
-         * Update the processing button visibility and count
+         * Update the processing button visibility, count, icon, and title based on active tasks
          */
         function updateProcessingButton() {
             const btn = document.getElementById('processing-btn');
             const badge = document.getElementById('processing-count');
+            const icon = document.getElementById('processing-icon');
             const count = activeLoadingIndicators.size;
 
             if (count > 0) {
                 btn?.classList.remove('hidden');
                 if (badge) badge.textContent = count;
+
+                // Determine icon and title based on active task types
+                let iconClass = 'fa-circle-notch';
+                let title = 'AI Processing';
+
+                // Check what types of tasks are running
+                const taskIds = Array.from(activeLoadingIndicators.keys());
+                const hasExpert = taskIds.some(id => id.includes('expert'));
+                const hasTag = taskIds.some(id => id.includes('tag'));
+                const hasExtract = taskIds.some(id => id.includes('extract'));
+                const hasOptimize = taskIds.some(id => id.includes('optimize'));
+                const hasConsistency = taskIds.some(id => id.includes('consistency'));
+
+                if (hasExpert) {
+                    iconClass = 'fa-brain';
+                    title = 'Generating Expert Analysis';
+                } else if (hasTag) {
+                    iconClass = 'fa-tags';
+                    title = 'AI Tag Generation';
+                } else if (hasExtract) {
+                    iconClass = 'fa-file-import';
+                    title = 'Extracting Comments';
+                } else if (hasOptimize) {
+                    iconClass = 'fa-sort-amount-up';
+                    title = 'Optimizing Task Order';
+                } else if (hasConsistency) {
+                    iconClass = 'fa-link';
+                    title = 'Checking Consistency';
+                }
+
+                // Update icon
+                if (icon) {
+                    icon.className = `fas ${iconClass} fa-spin`;
+                }
+                // Update title
+                if (btn) {
+                    btn.title = title + ` (${count} task${count > 1 ? 's' : ''})`;
+                }
             } else {
                 btn?.classList.add('hidden');
                 // Also hide panel if no tasks
                 document.getElementById('processing-panel')?.classList.add('hidden');
             }
+        }
+
+        /**
+         * Get the appropriate icon class for a task ID
+         */
+        function getTaskIcon(taskId) {
+            if (taskId.includes('expert')) return 'fa-brain';
+            if (taskId.includes('tag')) return 'fa-tags';
+            if (taskId.includes('extract')) return 'fa-file-import';
+            if (taskId.includes('optimize')) return 'fa-sort-amount-up';
+            if (taskId.includes('consistency')) return 'fa-link';
+            if (taskId.includes('context')) return 'fa-database';
+            return 'fa-circle-notch';
         }
 
         /**
@@ -97,9 +334,10 @@ const API_BASE = 'http://localhost:3001';
             let html = '';
             activeLoadingIndicators.forEach((info, id) => {
                 const elapsed = Math.round((Date.now() - info.startTime) / 1000);
+                const iconClass = getTaskIcon(id);
                 html += `
                     <div class="processing-item" data-id="${id}">
-                        <div class="processing-item-spinner"><i class="fas fa-circle-notch fa-spin"></i></div>
+                        <div class="processing-item-spinner"><i class="fas ${iconClass} fa-spin"></i></div>
                         <div class="processing-item-text">${escapeHtml(info.message)}</div>
                         <div class="processing-item-time">${elapsed}s</div>
                     </div>
@@ -1066,14 +1304,12 @@ Number sequentially: ${reviewerId}-1, ${reviewerId}-2, etc.`;
 
                 const result = await response.json();
 
-                // Parse JSON from response
-                const jsonMatch = result.response.match(/\{[\s\S]*\}/);
-                if (!jsonMatch) {
-                    hideOpenCodeLoading('extract-comments', { success: false, message: 'No JSON in response' });
-                    throw new Error('No JSON in response');
+                // Parse JSON from response using robust extraction
+                const extracted = extractJsonFromResponse(result.response);
+                if (!extracted) {
+                    hideOpenCodeLoading('extract-comments', { success: false, message: 'Could not parse JSON from response' });
+                    throw new Error('Could not parse JSON from response');
                 }
-
-                const extracted = JSON.parse(jsonMatch[0]);
                 extractedCommentsData = extracted;
 
                 // Show extracted comments
@@ -1770,15 +2006,13 @@ Authentication, Methods, Analysis, Interpretation, Terminology, Clarity, Figure,
                 throw new Error('Invalid API response');
             }
 
-            // Extract JSON from response
-            const jsonMatch = result.response.match(/\{[\s\S]*\}/);
-            if (!jsonMatch) {
+            // Extract JSON from response using robust extraction
+            const extracted = extractJsonFromResponse(result.response);
+            if (!extracted) {
                 console.error('No JSON found in response:', result.response.substring(0, 500));
-                hideOpenCodeLoading('extract-reviewers', { success: false, message: 'No JSON in response' });
-                throw new Error('No JSON found in AI response');
+                hideOpenCodeLoading('extract-reviewers', { success: false, message: 'Could not parse JSON from response' });
+                throw new Error('Could not parse JSON from AI response');
             }
-
-            const extracted = JSON.parse(jsonMatch[0]);
 
             if (!extracted.reviewers || !Array.isArray(extracted.reviewers)) {
                 hideOpenCodeLoading('extract-reviewers', { success: false, message: 'Invalid response format' });
@@ -2053,13 +2287,11 @@ Before responding, verify you have:
             }
 
             const result = await response.json();
-            const jsonMatch = result.response.match(/\{[\s\S]*\}/);
-            if (!jsonMatch) {
-                hideOpenCodeLoading(`extract-${reviewerId}`, { success: false, message: 'No JSON in response' });
-                throw new Error('No JSON in response');
+            const extracted = extractJsonFromResponse(result.response);
+            if (!extracted) {
+                hideOpenCodeLoading(`extract-${reviewerId}`, { success: false, message: 'Could not parse JSON from response' });
+                throw new Error('Could not parse JSON from response');
             }
-
-            const extracted = JSON.parse(jsonMatch[0]);
             hideOpenCodeLoading(`extract-${reviewerId}`, { success: true, message: `Extracted ${extracted.comments?.length || 0} comments` });
 
             // Add to reviewData
@@ -2086,9 +2318,21 @@ Before responding, verify you have:
         }
 
         async function clearExpertAnalysis() {
+            console.log('Clearing all expert analysis data...');
             expertDiscussions = { expert_discussions: {} };
             localStorage.removeItem('expertDiscussions');
-            await saveExpertDiscussions();
+
+            // Also clear from server
+            try {
+                await fetch(`${API_BASE}/expert-discussions`, {
+                    method: 'DELETE'
+                });
+                console.log('Expert discussions cleared from server');
+            } catch (e) {
+                console.log('Server clear not available');
+            }
+
+            showNotification('Expert analysis data cleared', 'success');
         }
 
         async function clearDraftResponses() {
@@ -3848,11 +4092,70 @@ Use the "Generate Expert Analysis" button to create insights using OpenCode.
             const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
             document.getElementById('progress-bar').style.width = `${progress}%`;
             document.getElementById('progress-text').textContent = `${progress}% Complete (${completed}/${total})`;
+
+            // Update top tags widget
+            updateTopTagsWidget();
         }
 
         function getAllComments() {
             if (!reviewData || !reviewData.reviewers) return [];
             return reviewData.reviewers.flatMap(r => r.comments.map(c => ({...c, reviewer: r.name, reviewerId: r.id})));
+        }
+
+        // Get all unique tags across all comments
+        function getAllTags() {
+            const allComments = getAllComments();
+            const tagCounts = {};
+            allComments.forEach(c => {
+                (c.tags || []).forEach(tag => {
+                    tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+                });
+            });
+            // Return array of {tag, count} sorted by count descending
+            return Object.entries(tagCounts)
+                .map(([tag, count]) => ({ tag, count }))
+                .sort((a, b) => b.count - a.count);
+        }
+
+        // Tag taxonomy - 3 dimensions (global definition)
+        const TAG_TAXONOMY = {
+            // Domain tags - field/context (AI picks based on paper content)
+            domain: [
+                'geology', 'genetics', 'bioinformatics', 'phylogenetics', 'ecology',
+                'microbiology', 'biochemistry', 'evolution', 'paleontology', 'genomics',
+                'proteomics', 'statistics', 'computation', 'imaging', 'sequencing'
+            ],
+            // Topic tags - what's being criticized
+            topic: [
+                'methodology', 'analysis', 'figures', 'data', 'writing',
+                'citations', 'discussion', 'scope', 'reproducibility', 'interpretation'
+            ],
+            // Action tags - how to fix it
+            action: [
+                'clarify', 'add', 'revise', 'justify', 'verify', 'expand', 'reduce'
+            ]
+        };
+
+        // Categorize a tag into its dimension
+        function getTagDimension(tag) {
+            if (TAG_TAXONOMY.topic.includes(tag)) return 'topic';
+            if (TAG_TAXONOMY.action.includes(tag)) return 'action';
+            return 'domain'; // Default to domain for unknown tags
+        }
+
+        // Get tags grouped by dimension
+        function getTagsByDimension() {
+            const tags = getAllTags();
+            const grouped = {
+                domain: [],
+                topic: [],
+                action: []
+            };
+            tags.forEach(t => {
+                const dim = getTagDimension(t.tag);
+                grouped[dim].push(t);
+            });
+            return grouped;
         }
 
         // Find a comment by its ID across all reviewers
@@ -3992,6 +4295,7 @@ Use the "Generate Expert Analysis" button to create insights using OpenCode.
                 'taskqueue': { title: 'Task Queue', subtitle: 'AI-optimized task order - drag to reorder', render: renderTaskQueue },
                 'comments': { title: 'All Comments', subtitle: 'Browse and manage all reviewer comments', render: renderAllComments },
                 'byreviewer': { title: 'By Reviewer', subtitle: 'View comments organized by reviewer', render: renderByReviewer },
+                'tags': { title: 'Tag Management', subtitle: 'Organize and manage comment tags', render: renderTagsView },
                 'agents': { title: 'AI Agents', subtitle: 'Specialized agents for response assistance', render: renderAgents },
                 'experts': { title: 'Expert Insights', subtitle: 'Multi-expert analysis of supplementary data', render: renderExperts },
                 'export': { title: 'Export', subtitle: 'Export responses and generate documents', render: renderExport }
@@ -4018,7 +4322,7 @@ Use the "Generate Expert Analysis" button to create insights using OpenCode.
         function getInitialView() {
             const urlParams = new URLSearchParams(window.location.search);
             const viewParam = urlParams.get('view');
-            const validViews = ['overview', 'taskqueue', 'comments', 'byreviewer', 'agents', 'experts', 'export'];
+            const validViews = ['overview', 'taskqueue', 'comments', 'byreviewer', 'tags', 'agents', 'experts', 'export'];
             return validViews.includes(viewParam) ? viewParam : 'overview';
         }
 
@@ -4292,10 +4596,18 @@ Use the "Generate Expert Analysis" button to create insights using OpenCode.
                     comments = comments.filter(c => c.requires_new_analysis === currentFilter.value);
                 } else if (currentFilter.type === 'status') {
                     comments = comments.filter(c => c.status === currentFilter.value);
+                } else if (currentFilter.type === 'tag') {
+                    comments = comments.filter(c => (c.tags || []).includes(currentFilter.value));
+                } else if (currentFilter.type === 'tagsearch') {
+                    // Partial tag search
+                    const query = currentFilter.value;
+                    comments = comments.filter(c =>
+                        (c.tags || []).some(tag => tag.toLowerCase().includes(query))
+                    );
                 } else if (currentFilter.type === 'search') {
                     const query = currentFilter.value;
                     comments = comments.filter(c => {
-                        // Search in multiple fields
+                        // Search in multiple fields including tags
                         const searchFields = [
                             c.id,
                             c.original_text,
@@ -4303,7 +4615,8 @@ Use the "Generate Expert Analysis" button to create insights using OpenCode.
                             c.draft_response,
                             c.category,
                             c.reviewer,
-                            c.location
+                            c.location,
+                            ...(c.tags || [])
                         ].filter(Boolean).map(f => f.toLowerCase());
                         return searchFields.some(field => field.includes(query));
                     });
@@ -4361,6 +4674,32 @@ Use the "Generate Expert Analysis" button to create insights using OpenCode.
                             <i class="fas fa-clock"></i> Pending (${allComments.filter(c => c.status === 'pending').length})
                         </button>
                     </div>
+                    ${(() => {
+                        const tagsByDim = getTagsByDimension();
+                        const hasAnyTags = tagsByDim.domain.length + tagsByDim.topic.length + tagsByDim.action.length > 0;
+                        if (!hasAnyTags) return '';
+
+                        const renderDimTags = (tags, label, cssClass) => {
+                            if (tags.length === 0) return '';
+                            return `
+                                <span class="filter-label ${cssClass}">${label}:</span>
+                                ${tags.slice(0, 8).map(({tag, count}) => `
+                                    <button onclick="filterByTag('${escapeHtml(tag).replace(/'/g, "\\'")}')"
+                                            class="filter-btn tag ${cssClass} ${currentFilter?.type === 'tag' && currentFilter?.value === tag ? 'active' : ''}">
+                                        ${escapeHtml(tag)} <span class="filter-count">${count}</span>
+                                    </button>
+                                `).join('')}
+                            `;
+                        };
+
+                        return `
+                            <div class="comments-filter-btns tag-filters">
+                                ${renderDimTags(tagsByDim.domain, 'Domain', 'domain')}
+                                ${renderDimTags(tagsByDim.topic, 'Topic', 'topic')}
+                                ${renderDimTags(tagsByDim.action, 'Action', 'action')}
+                            </div>
+                        `;
+                    })()}
                 </div>
 
                 <!-- Filter & Sort Controls -->
@@ -4377,6 +4716,10 @@ Use the "Generate Expert Analysis" button to create insights using OpenCode.
                             <span class="comments-filter-badge">
                                 ${currentFilter.type === 'search'
                                     ? `<i class="fas fa-search"></i> "${currentFilter.value}"`
+                                    : currentFilter.type === 'tag'
+                                    ? `<i class="fas fa-tag"></i> ${currentFilter.value}`
+                                    : currentFilter.type === 'tagsearch'
+                                    ? `<i class="fas fa-tags"></i> tag: "${currentFilter.value}"`
                                     : `Filter: ${currentFilter.type} = ${currentFilter.value}`}
                                 <button onclick="clearFilter(); document.getElementById('search-input').value = '';" class="comments-filter-badge-clear">&times;</button>
                             </span>
@@ -4447,8 +4790,8 @@ Use the "Generate Expert Analysis" button to create insights using OpenCode.
         function renderCommentCard(comment) {
             const priorityClass = `priority-${comment.priority}`;
 
-            // Get expert data from embedded discussions
-            const expertData = expertDiscussions?.expert_discussions?.[comment.id];
+            // Get validated expert data (null if stale/mismatched)
+            const expertData = getValidatedExpertData(comment.id, comment);
             const experts = expertData?.experts || comment.experts || [];
             const recommendedResponse = expertData?.recommended_response || comment.recommended_response || '';
             const adviceToAuthor = expertData?.advice_to_author || comment.advice_to_author || '';
@@ -4545,6 +4888,7 @@ Use the "Generate Expert Analysis" button to create insights using OpenCode.
                             <a href="javascript:void(0)" class="comment-id comment-link-pill" onclick="openCommentModal('${comment.reviewerId}', '${comment.id}')" title="Open ${comment.id} in Response Builder">${comment.id}</a>
                             <span class="badge ${comment.type === 'major' ? 'badge-major' : 'badge-minor'}">${comment.type}</span>
                             <span class="badge badge-secondary">${comment.category}</span>
+                            ${(comment.tags || []).map(tag => `<span class="tag-badge">${escapeHtml(tag)}</span>`).join('')}
                         </div>
                         <div class="comment-actions-inline">
                             <span class="badge ${getStatusBadgeClass(comment.status)}">${comment.status}</span>
@@ -5037,20 +5381,25 @@ Use the "Generate Expert Analysis" button to create insights using OpenCode.
         function syncExpertDataWithComments() {
             if (!reviewData || !reviewData.reviewers || !expertDiscussions?.expert_discussions) return;
 
-            // Merge expert discussions data into the comment objects
+            // Merge expert discussions data into the comment objects (only if validated)
             for (const reviewer of reviewData.reviewers) {
                 for (const comment of reviewer.comments) {
-                    const expertData = expertDiscussions.expert_discussions[comment.id];
+                    const expertData = getValidatedExpertData(comment.id, comment);
                     if (expertData) {
-                        // Sync expert data to the comment object
-                        comment.experts = expertData.experts || comment.experts;
-                        comment.recommended_response = expertData.recommended_response || comment.recommended_response;
-                        comment.advice_to_author = expertData.advice_to_author || comment.advice_to_author;
+                        // Sync validated expert data to the comment object
+                        comment.experts = expertData.experts || [];
+                        comment.recommended_response = expertData.recommended_response || '';
+                        comment.advice_to_author = expertData.advice_to_author || '';
                         comment.full_context = expertData.full_context || comment.full_context;
+                    } else {
+                        // Clear stale expert data from comment
+                        delete comment.experts;
+                        delete comment.recommended_response;
+                        delete comment.advice_to_author;
                     }
                 }
             }
-            console.log('Synced expert data with comments');
+            console.log('Synced expert data with comments (validated)');
         }
 
         // Refresh all views with synchronized data
@@ -5106,7 +5455,15 @@ Use the "Generate Expert Analysis" button to create insights using OpenCode.
             // Count stats from actual comments
             const majorCount = allComments.filter(c => c.type === 'major').length;
             const minorCount = allComments.filter(c => c.type === 'minor').length;
-            const withExpertCount = allCommentIds.filter(id => expertDiscussions?.expert_discussions?.[id]?.experts?.length > 0).length;
+
+            // Only count expert analyses that match their comments (validation)
+            const withExpertCount = allCommentIds.filter(id => {
+                const disc = expertDiscussions?.expert_discussions?.[id];
+                const comment = allComments.find(c => c.id === id);
+                if (!disc?.experts?.length || !comment) return false;
+                // Validate that expert data matches comment text
+                return validateExpertData(disc, comment);
+            }).length;
 
             // Count reviewers dynamically
             const reviewerIds = [...new Set(allCommentIds.map(id => id.split('-')[0]))].sort();
@@ -5153,15 +5510,15 @@ Use the "Generate Expert Analysis" button to create insights using OpenCode.
             // Build discussion cards
             let discussionCards = '';
             for (const commentId of filteredIds) {
-                const disc = expertDiscussions?.expert_discussions?.[commentId];
                 const comment = allComments.find(c => c.id === commentId);
                 if (!comment) continue;
 
-                // Use expert discussion data if available, otherwise fall back to comment data
+                // Get validated expert data (null if stale/mismatched)
+                const disc = getValidatedExpertData(commentId, comment);
                 const priority = disc?.priority || comment.priority || 'medium';
                 const type = disc?.type || comment.type || 'minor';
                 const category = disc?.category || comment.category || 'General';
-                const reviewerComment = disc?.reviewer_comment || comment.original_text || '';
+                const reviewerComment = comment.original_text || ''; // Always use actual comment text
                 const fullContext = disc?.full_context || comment.full_context || '';
 
                 const priorityClass = priority === 'high' ? 'priority-high' :
@@ -5268,7 +5625,9 @@ Use the "Generate Expert Analysis" button to create insights using OpenCode.
                                     Potential Solutions
                                 </h5>
                                 <div class="solutions-grid">
-                                    ${disc.potential_solutions.map((sol, idx) => `
+                                    ${disc.potential_solutions.map((rawSol, idx) => {
+                                        const sol = normalizeSolution(rawSol, idx);
+                                        return `
                                         <div class="solution-card ${idx === 0 ? 'recommended' : ''}" data-comment="${commentId}" data-idx="${idx}">
                                             <div class="solution-header">
                                                 <span class="solution-title">${sol.title}</span>
@@ -5278,8 +5637,8 @@ Use the "Generate Expert Analysis" button to create insights using OpenCode.
                                             <button onclick="useSolution('${commentId}', ${idx})" class="btn btn-sm ${idx === 0 ? 'btn-success' : 'btn-secondary'}">
                                                 <i class="fas fa-check"></i> Use This
                                             </button>
-                                        </div>
-                                    `).join('')}
+                                        </div>`;
+                                    }).join('')}
                                 </div>
                             </div>
                             ` : disc?.recommended_response ? `
@@ -5587,6 +5946,13 @@ Return your analysis in this exact JSON format:
       "key_data_points": ["stat1", "stat2", "stat3"]
     }
   ],
+  "potential_solutions": [
+    {
+      "title": "Short title for solution approach",
+      "effort": "LOW/MEDIUM/HIGH",
+      "response": "Detailed description of this solution approach and how to implement it"
+    }
+  ],
   "recommended_response": "A complete, professional draft response (2-4 paragraphs) that thanks the reviewer, addresses their concern with specific data, and explains what actions were taken. Use past tense for completed actions.",
   "advice_to_author": "Strategic meta-advice on tone, framing, and what to emphasize when responding to this comment"
 }
@@ -5596,6 +5962,7 @@ GUIDELINES:
 - Use specific numbers/data when available
 - For valid criticisms: agree graciously and explain fixes
 - For misunderstandings: respectfully clarify with evidence
+- Include 2-4 potential_solutions with different effort levels (at least one LOW, one MEDIUM)
 - Icons: dna, flask, code, tree, leaf, mountain, shield-virus, cogs, pen, globe, code-branch, chart-bar
 - Colors: blue, green, red, orange, purple, cyan, brown, gray`;
 
@@ -5615,12 +5982,10 @@ GUIDELINES:
                 if (response.ok) {
                     const result = await response.json();
 
-                    // Try to parse JSON from response
+                    // Try to parse JSON from response using robust extraction
                     try {
-                        const jsonMatch = result.response.match(/\{[\s\S]*\}/);
-                        if (jsonMatch) {
-                            const newExpertData = JSON.parse(jsonMatch[0]);
-
+                        const newExpertData = extractJsonFromResponse(result.response);
+                        if (newExpertData) {
                             // Update the expert discussions
                             if (!expertDiscussions) expertDiscussions = { expert_discussions: {} };
 
@@ -5642,6 +6007,12 @@ GUIDELINES:
                             await saveExpertDiscussions();
                             syncExpertDataWithComments(); // Sync to keep all views consistent
                             renderExperts();
+
+                            // Refresh modal if it's open for this comment
+                            if (editingComment && editingComment.commentId === commentId) {
+                                openCommentModal(editingComment.reviewerId, commentId);
+                            }
+
                             hideOpenCodeLoading(`expert-${commentId}`, { success: true, message: `Expert analysis regenerated for ${commentId}` });
                         } else {
                             hideOpenCodeLoading(`expert-${commentId}`, { success: false, message: 'Could not parse expert analysis' });
@@ -5733,28 +6104,55 @@ GUIDELINES:
             const manuscriptContext = buildManuscriptContextForExperts();
             const suggestedExperts = getRelevantExpertTypes(comment.category);
 
-            const batchPrompt = `Expert panel analysis for reviewer comment on scientific manuscript.
+            const batchPrompt = `You are analyzing a SPECIFIC reviewer comment on a scientific manuscript. Generate expert panel analysis for THIS EXACT COMMENT ONLY.
 
+=== MANUSCRIPT CONTEXT ===
 ${manuscriptContext}
 
-COMMENT: ${comment.id} (${comment.type.toUpperCase()}, ${comment.priority} priority)
-CATEGORY: ${comment.category}
-${comment.location ? `LOCATION: ${comment.location}` : ''}
+=== THE SPECIFIC COMMENT TO ANALYZE ===
+Comment ID: ${comment.id}
+Type: ${comment.type.toUpperCase()}
+Priority: ${comment.priority}
+Category: ${comment.category}
+${comment.location ? `Location in manuscript: ${comment.location}` : ''}
 
+REVIEWER'S EXACT WORDS:
 "${comment.original_text}"
 
-${comment.full_context ? `CONTEXT: ${comment.full_context}` : ''}
+${comment.full_context ? `ADDITIONAL CONTEXT:\n${comment.full_context}` : ''}
 
-Consider experts like: ${suggestedExperts.join(', ')}
+=== YOUR TASK ===
+Analyze THIS SPECIFIC COMMENT (${comment.id}) and provide expert perspectives.
 
-Return JSON:
+Suggested expert types for this category: ${suggestedExperts.join(', ')}
+
+=== REQUIRED JSON OUTPUT FORMAT ===
+Return ONLY a valid JSON object (no markdown, no explanation):
+
 {
-  "experts": [{"name": "Expert Title", "icon": "dna/flask/code/tree/leaf/cogs/pen", "color": "blue/green/red/orange/purple", "verdict": "AGREE/DISAGREE - summary", "assessment": "Detailed assessment", "data_analysis": ["Point 1", "Point 2"], "recommendation": "Action to take", "key_data_points": ["stat1", "stat2"]}],
-  "recommended_response": "Professional 2-4 paragraph response thanking reviewer, addressing concern with data, explaining actions taken (past tense)",
-  "advice_to_author": "Strategic advice on tone and framing"
+  "experts": [
+    {
+      "name": "Full Expert Title (e.g., Ancient DNA Authentication Specialist)",
+      "icon": "dna",
+      "color": "blue",
+      "verdict": "Addressable",
+      "assessment": "2-3 sentence detailed assessment of the reviewer's point",
+      "data_analysis": ["Specific data point 1", "Specific data point 2"],
+      "recommendation": "Concrete action to address this specific comment",
+      "key_data_points": ["Relevant statistic or finding"]
+    }
+  ],
+  "recommended_response": "Professional 2-4 paragraph response that: 1) Thanks reviewer for this specific point, 2) Addresses the concern with specific data/evidence, 3) Explains what was done (past tense) to resolve it",
+  "advice_to_author": "Brief strategic advice on tone and framing for this response"
 }
 
-Use 1-3 experts. Be specific with data. For valid criticisms: agree graciously. For misunderstandings: clarify respectfully.`;
+=== FIELD SPECIFICATIONS ===
+- icon: One of: dna, flask, code, tree, leaf, cogs, pen, microscope, chart-bar, database
+- color: One of: blue, green, purple, orange, red, cyan
+- verdict: One of: Addressable, Partially Addressable, Requires Discussion, Valid Concern, Minor Issue
+- Use 1-3 experts maximum
+- Be SPECIFIC to this comment - do not give generic advice
+- Reference actual data, methods, or findings from the manuscript context when possible`;
 
             const response = await fetch(`${API_BASE}/ask`, {
                 method: 'POST',
@@ -5768,13 +6166,21 @@ Use 1-3 experts. Be specific with data. For valid criticisms: agree graciously. 
                 })
             });
 
-            if (!response.ok) throw new Error('API request failed');
+            if (!response.ok) throw new Error(`API request failed: ${response.status}`);
 
             const result = await response.json();
-            const jsonMatch = result.response.match(/\{[\s\S]*\}/);
-            if (!jsonMatch) throw new Error('No JSON in response');
 
-            const newExpertData = JSON.parse(jsonMatch[0]);
+            // Robust JSON extraction - find balanced braces
+            const newExpertData = extractJsonFromResponse(result.response);
+            if (!newExpertData) {
+                throw new Error(`No valid JSON in response for ${comment.id}`);
+            }
+
+            // Validate required fields
+            if (!newExpertData.experts || !Array.isArray(newExpertData.experts)) {
+                console.warn(`Expert analysis for ${comment.id} missing experts array, using empty`);
+                newExpertData.experts = [];
+            }
 
             if (!expertDiscussions) expertDiscussions = { expert_discussions: {} };
 
@@ -5809,13 +6215,15 @@ Use 1-3 experts. Be specific with data. For valid criticisms: agree graciously. 
 
             // Also try to save to server if available
             try {
-                const response = await fetch(`${API_BASE}/expert-discussions`, {
+                const response = await fetch(`${API_BASE}/db/experts?paper_id=${currentPaperId}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(expertDiscussions)
                 });
                 if (response.ok) {
                     console.log('Expert discussions saved to server');
+                } else {
+                    console.log('Server save failed:', response.status);
                 }
             } catch (e) {
                 // Server save is optional, don't show error
@@ -5841,122 +6249,169 @@ Use 1-3 experts. Be specific with data. For valid criticisms: agree graciously. 
         }
 
         function useExpertResponse(commentId) {
-            if (!expertDiscussions || !expertDiscussions.expert_discussions[commentId]) {
-                showNotification('No expert response available for this comment', 'error');
+            const comment = getAllComments().find(c => c.id === commentId);
+            if (!comment) {
+                showNotification('Comment not found', 'error');
                 return;
             }
 
-            const disc = expertDiscussions.expert_discussions[commentId];
-            if (!disc.recommended_response) {
+            const expertData = getValidatedExpertData(commentId, comment);
+            if (!expertData) {
+                showNotification('Expert analysis is stale - please regenerate', 'error');
+                return;
+            }
+
+            if (!expertData.recommended_response) {
                 showNotification('No recommended response generated yet', 'warning');
                 return;
             }
 
-            // Find the matching comment in reviewData
-            for (const reviewer of reviewData.reviewers) {
-                const comment = reviewer.comments.find(c => c.id === commentId);
-                if (comment) {
-                    comment.draft_response = disc.recommended_response;
-                    comment.status = 'in_progress';
-                    saveProgress();
-                    showNotification(`Response applied to ${commentId}`, 'success');
-                    // Refresh the current view to show updated status
-                    setView(currentView);
-                    return;
-                }
+            comment.draft_response = expertData.recommended_response;
+            comment.status = 'in_progress';
+            saveProgress();
+            showNotification(`Response applied to ${commentId}`, 'success');
+            setView(currentView);
+        }
+
+        // Use recommended response directly in the modal (fills textarea)
+        function useRecommendedInModal(commentId) {
+            const comment = getAllComments().find(c => c.id === commentId);
+            if (!comment) {
+                showNotification('Comment not found', 'error');
+                return;
             }
-            showNotification('Comment not found', 'error');
+
+            const expertData = getValidatedExpertData(commentId, comment);
+            if (!expertData?.recommended_response) {
+                showNotification('No recommended response available', 'warning');
+                return;
+            }
+
+            // Fill the textarea in the modal
+            const textarea = document.getElementById('edit-response');
+            if (textarea) {
+                textarea.value = expertData.recommended_response;
+                // Trigger preview update
+                textarea.dispatchEvent(new Event('input'));
+            }
+
+            // Update comment data
+            comment.draft_response = expertData.recommended_response;
+            comment.status = 'in_progress';
+
+            // Update status dropdown
+            const statusSelect = document.getElementById('edit-status');
+            if (statusSelect) statusSelect.value = 'in_progress';
+
+            showNotification('Recommended response applied to editor', 'success');
+        }
+
+        // Regenerate expert analysis from within the modal (shows inline loading)
+        async function regenerateExpertInModal(commentId) {
+            // Show loading state in modal
+            const loadingEl = document.getElementById('modal-expert-loading');
+            const contentEl = document.getElementById('modal-expert-content');
+            const regenBtn = document.getElementById('modal-regenerate-btn');
+            const genBtn = document.getElementById('modal-generate-btn');
+
+            if (loadingEl) loadingEl.classList.remove('hidden');
+            if (contentEl) contentEl.style.opacity = '0.3';
+            if (regenBtn) regenBtn.disabled = true;
+            if (genBtn) genBtn.disabled = true;
+
+            // Call the actual regenerate function
+            await regenerateExpertForComment(commentId);
+
+            // The modal will be refreshed by regenerateExpertForComment when it completes
+            // But in case of error, restore the UI
+            if (loadingEl) loadingEl.classList.add('hidden');
+            if (contentEl) contentEl.style.opacity = '1';
+            if (regenBtn) regenBtn.disabled = false;
+            if (genBtn) genBtn.disabled = false;
         }
 
         // Use a specific solution from the potential_solutions array
         function useSolution(commentId, solutionIndex) {
-            if (!expertDiscussions || !expertDiscussions.expert_discussions[commentId]) {
-                showNotification('No solutions available for this comment', 'error');
+            const comment = getAllComments().find(c => c.id === commentId);
+            if (!comment) {
+                showNotification('Comment not found', 'error');
                 return;
             }
 
-            const disc = expertDiscussions.expert_discussions[commentId];
-            const solutions = disc.potential_solutions || [];
+            const expertData = getValidatedExpertData(commentId, comment);
+            if (!expertData) {
+                showNotification('Expert analysis is stale - please regenerate', 'error');
+                return;
+            }
 
-            if (solutionIndex >= solutions.length) {
+            const rawSolution = expertData.potential_solutions?.[solutionIndex];
+            if (!rawSolution) {
                 showNotification('Solution not found', 'error');
                 return;
             }
 
-            const solution = solutions[solutionIndex];
-
-            // Find the matching comment in reviewData
-            for (const reviewer of reviewData.reviewers) {
-                const comment = reviewer.comments.find(c => c.id === commentId);
-                if (comment) {
-                    comment.draft_response = solution.response;
-                    comment.status = 'in_progress';
-                    saveProgress();
-                    showNotification(`"${solution.title}" applied to ${commentId}`, 'success');
-                    // Refresh the current view to show updated status
-                    setView(currentView);
-                    return;
-                }
-            }
-            showNotification('Comment not found', 'error');
+            const solution = normalizeSolution(rawSolution, solutionIndex);
+            comment.draft_response = solution.response;
+            comment.status = 'in_progress';
+            saveProgress();
+            showNotification(`"${solution.title}" applied to ${commentId}`, 'success');
+            setView(currentView);
         }
 
         // Toggle AI solution checkbox in the Edit modal
         function toggleSolutionAI(commentId, solutionIndex) {
-            const aiSolutions = expertDiscussions?.expert_discussions?.[commentId]?.potential_solutions || [];
+            const comment = getAllComments().find(c => c.id === commentId);
+            if (!comment) return;
 
-            // Find the comment to update actions_taken
-            for (const reviewer of reviewData.reviewers) {
-                const comment = reviewer.comments.find(c => c.id === commentId);
-                if (comment) {
-                    if (!comment.actions_taken) comment.actions_taken = [];
+            if (!comment.actions_taken) comment.actions_taken = [];
 
-                    // Get the solution text
-                    const sol = aiSolutions[solutionIndex] || comment.potential_solutions?.[solutionIndex];
-                    const solText = typeof sol === 'string' ? sol : (sol?.title || sol?.response || '');
+            // Get validated AI solutions or fall back to local solutions
+            const expertData = getValidatedExpertData(commentId, comment);
+            const aiSolutions = expertData?.potential_solutions || [];
+            const sol = aiSolutions[solutionIndex] || comment.potential_solutions?.[solutionIndex];
+            const solText = typeof sol === 'string' ? sol : (sol?.title || sol?.response || '');
 
-                    if (comment.actions_taken.includes(solText)) {
-                        comment.actions_taken = comment.actions_taken.filter(a => a !== solText);
-                    } else {
-                        comment.actions_taken.push(solText);
-                    }
-
-                    // Update display
-                    updateActionsTakenDisplay(comment);
-                    saveProgress();
-                    return;
-                }
+            // Toggle the solution
+            if (comment.actions_taken.includes(solText)) {
+                comment.actions_taken = comment.actions_taken.filter(a => a !== solText);
+            } else {
+                comment.actions_taken.push(solText);
             }
+
+            updateActionsTakenDisplay(comment);
+            saveProgress();
         }
 
         // Use AI solution in the Edit modal - copies response to draft textarea
         function useAiSolution(commentId, solutionIndex) {
-            const aiSolutions = expertDiscussions?.expert_discussions?.[commentId]?.potential_solutions || [];
+            const comment = getAllComments().find(c => c.id === commentId);
+            if (!comment) {
+                showNotification('Comment not found', 'error');
+                return;
+            }
 
-            if (solutionIndex >= aiSolutions.length) {
+            const expertData = getValidatedExpertData(commentId, comment);
+            if (!expertData) {
+                showNotification('Expert data is stale - please regenerate', 'error');
+                return;
+            }
+
+            const rawSolution = expertData.potential_solutions?.[solutionIndex];
+            if (!rawSolution) {
                 showNotification('Solution not found', 'error');
                 return;
             }
 
-            const solution = aiSolutions[solutionIndex];
-
-            // Find the draft textarea in the modal and set the response
+            const solution = normalizeSolution(rawSolution, solutionIndex);
             const draftTextarea = document.getElementById('draft-response');
             if (draftTextarea) {
                 draftTextarea.value = solution.response;
                 showNotification(`"${solution.title}" applied to draft`, 'success');
             } else {
-                // Fallback: directly update the comment
-                for (const reviewer of reviewData.reviewers) {
-                    const comment = reviewer.comments.find(c => c.id === commentId);
-                    if (comment) {
-                        comment.draft_response = solution.response;
-                        comment.status = 'in_progress';
-                        saveProgress();
-                        showNotification(`"${solution.title}" applied to ${commentId}`, 'success');
-                        return;
-                    }
-                }
+                comment.draft_response = solution.response;
+                comment.status = 'in_progress';
+                saveProgress();
+                showNotification(`"${solution.title}" applied to ${commentId}`, 'success');
             }
         }
 
@@ -6947,6 +7402,11 @@ Your response:`;
             setView('comments', true);  // preserve filter
         }
 
+        function filterByTag(tag) {
+            currentFilter = { type: 'tag', value: tag };
+            setView('comments', true);  // preserve filter
+        }
+
         function clearFilter() {
             currentFilter = null;
             // Clear search input if it exists
@@ -6973,8 +7433,27 @@ Your response:`;
                     return;
                 }
 
+                const trimmedQuery = query.trim();
+
+                // Check for tag: prefix (case-insensitive)
+                const tagMatch = trimmedQuery.match(/^tag:\s*(.+)$/i);
+                if (tagMatch) {
+                    const tagQuery = tagMatch[1].trim().toLowerCase();
+                    // Find exact or partial tag match
+                    const allTags = getAllTags();
+                    const exactMatch = allTags.find(t => t.tag.toLowerCase() === tagQuery);
+                    if (exactMatch) {
+                        currentFilter = { type: 'tag', value: exactMatch.tag };
+                    } else {
+                        // Partial match - use search filter with tag prefix indicator
+                        currentFilter = { type: 'tagsearch', value: tagQuery };
+                    }
+                    setView('comments', true);
+                    return;
+                }
+
                 // Set the search filter and show results
-                currentFilter = { type: 'search', value: query.trim().toLowerCase() };
+                currentFilter = { type: 'search', value: trimmedQuery.toLowerCase() };
                 setView('comments', true);  // preserve filter
             }, 300);
         }
@@ -7052,13 +7531,95 @@ Your response:`;
             // Initialize actions_taken if not present
             if (!comment.actions_taken) comment.actions_taken = [];
 
-            // Get AI-generated potential solutions from expertDiscussions first
-            const aiSolutions = expertDiscussions?.expert_discussions?.[commentId]?.potential_solutions || [];
+            // Store original tags for version history tracking
+            comment._originalTags = [...(comment.tags || [])];
+
+            // Get validated expert data and solutions
+            const expertData = getValidatedExpertData(commentId, comment);
+            const aiSolutions = expertData?.potential_solutions || [];
+            const experts = expertData?.experts || [];
+            const recommendedResponse = expertData?.recommended_response || '';
+            const adviceToAuthor = expertData?.advice_to_author || '';
+
+            // Build expert analysis HTML for the modal
+            let expertAnalysisHtml = '';
+            if (experts.length > 0 || recommendedResponse) {
+                expertAnalysisHtml = `
+                    <div class="rb-card rb-expert-analysis" id="modal-expert-analysis">
+                        <div class="rb-card-header">
+                            <label class="rb-label">
+                                <div class="rb-icon-box purple">
+                                    <i class="fas fa-brain"></i>
+                                </div>
+                                Expert Analysis
+                            </label>
+                            <button onclick="regenerateExpertInModal('${commentId}')" class="btn btn-sm btn-ghost" title="Regenerate" id="modal-regenerate-btn">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                        <div id="modal-expert-loading" class="rb-loading-overlay hidden">
+                            <i class="fas fa-brain fa-spin"></i>
+                            <span>Generating expert analysis...</span>
+                        </div>
+                        <div id="modal-expert-content">
+                            ${experts.length > 0 ? `
+                                <div class="rb-experts-summary">
+                                    ${experts.map(expert => `
+                                        <div class="rb-expert-chip" title="${escapeHtml(expert.assessment || '')}">
+                                            <i class="fas ${iconMap[expert.icon] || 'fa-user'}"></i>
+                                            <span class="rb-expert-name">${expert.name?.split(' ')[0] || 'Expert'}</span>
+                                            <span class="rb-expert-verdict ${(expert.verdict || '').toLowerCase().includes('agree') ? 'agree' : (expert.verdict || '').toLowerCase().includes('disagree') ? 'disagree' : 'partial'}">${(expert.verdict || '').split(' ')[0]}</span>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            ` : ''}
+                            ${recommendedResponse ? `
+                                <div class="rb-recommended-response">
+                                    <div class="rb-rec-header">
+                                        <span class="rb-rec-label"><i class="fas fa-magic"></i> AI Recommended Response</span>
+                                    <button onclick="useRecommendedInModal('${commentId}')" class="btn btn-sm btn-success">
+                                        <i class="fas fa-check"></i> Use This
+                                    </button>
+                                </div>
+                                <p class="rb-rec-text">${recommendedResponse.substring(0, 300)}${recommendedResponse.length > 300 ? '...' : ''}</p>
+                            </div>
+                        ` : '<p class="rb-empty-text">No expert analysis yet. Click regenerate to generate.</p>'}
+                        ${adviceToAuthor ? `
+                            <div class="rb-advice">
+                                <i class="fas fa-lightbulb"></i>
+                                <span>${adviceToAuthor}</span>
+                            </div>
+                        ` : ''}
+                        </div>
+                    </div>
+                `;
+            } else {
+                expertAnalysisHtml = `
+                    <div class="rb-card rb-expert-analysis rb-no-analysis" id="modal-expert-analysis">
+                        <div class="rb-card-header">
+                            <label class="rb-label">
+                                <div class="rb-icon-box purple">
+                                    <i class="fas fa-brain"></i>
+                                </div>
+                                Expert Analysis
+                            </label>
+                        </div>
+                        <div id="modal-expert-loading" class="rb-loading-overlay hidden">
+                            <i class="fas fa-brain fa-spin"></i>
+                            <span>Generating expert analysis...</span>
+                        </div>
+                        <div id="modal-expert-content">
+                            <p class="rb-empty-text">No expert analysis available.</p>
+                            <button onclick="regenerateExpertInModal('${commentId}')" class="btn btn-sm btn-primary" style="margin-top: var(--sp-2);" id="modal-generate-btn">
+                                <i class="fas fa-wand-magic-sparkles"></i> Generate Expert Analysis
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
             // Fall back to local generated solutions if no AI solutions
             if (!comment.potential_solutions) comment.potential_solutions = generatePotentialSolutions(comment);
-
-            // Build solutions HTML - combine AI solutions with local solutions
-            // AI solutions are now simple strings (action items), same as local solutions
             const allSolutions = aiSolutions.length > 0 ? aiSolutions : comment.potential_solutions;
             let solutionsHtml = '';
             if (allSolutions.length > 0) {
@@ -7124,6 +7685,9 @@ Your response:`;
                                        onkeypress="if(event.key==='Enter')addCustomSolution()">
                             </div>
                         </div>
+
+                        <!-- Expert Analysis -->
+                        ${expertAnalysisHtml}
 
                         <!-- Actions Taken Summary -->
                         <div class="rb-card">
@@ -7232,6 +7796,22 @@ Your response:`;
                                         <option value="in_progress" ${comment.status === 'in_progress' ? 'selected' : ''}>In Progress</option>
                                         <option value="completed" ${comment.status === 'completed' ? 'selected' : ''}>Completed</option>
                                     </select>
+                                </div>
+                            </div>
+                            <!-- Tags Section -->
+                            <div class="mb-3">
+                                <label class="text-xs font-medium text-gray-600 mb-1.5 flex items-center gap-1">
+                                    <i class="fas fa-tags text-purple-500"></i> Tags
+                                </label>
+                                <div class="tag-input-container" id="tag-container">
+                                    ${(comment.tags || []).map(tag => `
+                                        <span class="tag-pill" data-tag="${escapeHtml(tag)}">
+                                            ${escapeHtml(tag)}
+                                            <button type="button" onclick="removeTag('${escapeHtml(tag).replace(/'/g, "\\'")}')" title="Remove">&times;</button>
+                                        </span>
+                                    `).join('')}
+                                    <input type="text" id="tag-input" class="tag-input" placeholder="Add tag and press Enter"
+                                           onkeydown="handleTagInput(event)">
                                 </div>
                             </div>
                             <textarea id="edit-response" class="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
@@ -7403,6 +7983,789 @@ Your response:`;
             }
         }
 
+        // =====================================================
+        // TAG MANAGEMENT FUNCTIONS
+        // =====================================================
+
+        function handleTagInput(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                const input = event.target;
+                const tag = input.value.trim();
+                if (tag) {
+                    addTag(tag);
+                    input.value = '';
+                }
+            }
+        }
+
+        function addTag(tag) {
+            if (!editingComment) return;
+            const reviewer = reviewData.reviewers.find(r => r.id === editingComment.reviewerId);
+            const comment = reviewer?.comments.find(c => c.id === editingComment.commentId);
+            if (!comment) return;
+
+            // Initialize tags array if needed
+            if (!comment.tags) comment.tags = [];
+
+            // Avoid duplicates (case-insensitive check)
+            const trimmed = tag.trim();
+            if (!trimmed) return;
+            const exists = comment.tags.some(t => t.toLowerCase() === trimmed.toLowerCase());
+            if (exists) return;
+
+            // Add the tag
+            comment.tags.push(trimmed);
+            renderTagPills(comment.tags);
+            scheduleAutoSave(); // Auto-save tags
+        }
+
+        function removeTag(tag) {
+            if (!editingComment) return;
+            const reviewer = reviewData.reviewers.find(r => r.id === editingComment.reviewerId);
+            const comment = reviewer?.comments.find(c => c.id === editingComment.commentId);
+            if (!comment) return;
+
+            // Remove the tag
+            comment.tags = (comment.tags || []).filter(t => t !== tag);
+            renderTagPills(comment.tags);
+            scheduleAutoSave(); // Auto-save tags
+        }
+
+        function renderTagPills(tags) {
+            const container = document.getElementById('tag-container');
+            if (!container) return;
+
+            // Keep the input element
+            const input = document.getElementById('tag-input');
+
+            container.innerHTML = (tags || []).map(tag => `
+                <span class="tag-pill" data-tag="${escapeHtml(tag)}">
+                    ${escapeHtml(tag)}
+                    <button type="button" onclick="removeTag('${escapeHtml(tag).replace(/'/g, "\\'")}')" title="Remove">&times;</button>
+                </span>
+            `).join('');
+
+            // Re-add the input
+            if (input) {
+                container.appendChild(input);
+            } else {
+                const newInput = document.createElement('input');
+                newInput.type = 'text';
+                newInput.id = 'tag-input';
+                newInput.className = 'tag-input';
+                newInput.placeholder = 'Add tag and press Enter';
+                newInput.onkeydown = handleTagInput;
+                container.appendChild(newInput);
+            }
+        }
+
+        function getTagsFromUI() {
+            if (!editingComment) return [];
+            const reviewer = reviewData.reviewers.find(r => r.id === editingComment.reviewerId);
+            const comment = reviewer?.comments.find(c => c.id === editingComment.commentId);
+            return comment?.tags || [];
+        }
+
+        // AI-powered tag suggestion
+        async function suggestTagsWithAI() {
+            if (!editingComment) return;
+
+            const reviewer = reviewData.reviewers.find(r => r.id === editingComment.reviewerId);
+            const comment = reviewer?.comments.find(c => c.id === editingComment.commentId);
+            if (!comment) return;
+
+            const btn = document.getElementById('ai-tag-btn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Thinking...';
+            btn.disabled = true;
+
+            try {
+                // Get existing tags for context (helps maintain consistency)
+                const existingTags = getAllTags().map(t => t.tag);
+
+                // Build prompt for tag suggestion
+                const prompt = `You are a research paper comment tagger. Analyze this reviewer comment and suggest 2-4 highly specific, actionable tags.
+
+COMMENT:
+"${comment.original_text}"
+
+CATEGORY: ${comment.category || 'General'}
+TYPE: ${comment.type || 'minor'}
+
+${existingTags.length > 0 ? `EXISTING TAGS IN SYSTEM (prefer these if relevant): ${existingTags.slice(0, 20).join(', ')}` : ''}
+
+RULES:
+1. Tags should be specific and actionable (e.g., "add-error-bars", "clarify-methods", "missing-citation")
+2. Use lowercase with hyphens, no spaces
+3. A comment can have multiple tags if it addresses multiple issues
+4. Avoid generic tags like "important" or "fix" - be specific about WHAT needs fixing
+5. Consider: methodology issues, data presentation, statistical concerns, writing clarity, missing information, factual errors
+
+Return ONLY a JSON array of tag strings, nothing else. Example: ["add-sample-size", "clarify-statistical-test"]`;
+
+                const response = await fetch(`${API_BASE}/ask`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        prompt: prompt,
+                        comment_id: comment.id + '_tags',
+                        model: aiSettings.model,
+                        agent: 'general',
+                        variant: 'low'
+                    })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    let suggestedTags = [];
+
+                    // Parse the response - it should be a JSON array
+                    try {
+                        // Try to extract JSON array from response
+                        const jsonMatch = result.response.match(/\[[\s\S]*?\]/);
+                        if (jsonMatch) {
+                            suggestedTags = JSON.parse(jsonMatch[0]);
+                        }
+                    } catch (parseErr) {
+                        // Fallback: split by comma if JSON parsing fails
+                        suggestedTags = result.response
+                            .replace(/[\[\]"']/g, '')
+                            .split(',')
+                            .map(t => t.trim())
+                            .filter(t => t && t.length > 0 && t.length < 50);
+                    }
+
+                    // Add suggested tags (avoid duplicates)
+                    let addedCount = 0;
+                    for (const tag of suggestedTags) {
+                        const cleanTag = tag.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+                        if (cleanTag && !(comment.tags || []).some(t => t.toLowerCase() === cleanTag)) {
+                            if (!comment.tags) comment.tags = [];
+                            comment.tags.push(cleanTag);
+                            addedCount++;
+                        }
+                    }
+
+                    if (addedCount > 0) {
+                        renderTagPills(comment.tags);
+                        scheduleAutoSave();
+                        showNotification(`Added ${addedCount} AI-suggested tag${addedCount > 1 ? 's' : ''}`, 'success');
+                    } else {
+                        showNotification('No new tags to add (all suggestions already exist)', 'info');
+                    }
+                } else {
+                    throw new Error('API request failed');
+                }
+            } catch (e) {
+                console.error('AI tag suggestion error:', e);
+                showNotification('Could not get AI suggestions. Is the server running?', 'error');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // =====================================================
+        // TAG ADMINISTRATION PANEL & VIEW
+        // =====================================================
+
+        function openTagAdminPanel() {
+            document.getElementById('tag-admin-panel').classList.remove('hidden');
+            document.getElementById('tag-admin-overlay').classList.remove('hidden');
+            renderTagAdminPanel();
+        }
+
+        function closeTagAdminPanel() {
+            document.getElementById('tag-admin-panel').classList.add('hidden');
+            document.getElementById('tag-admin-overlay').classList.add('hidden');
+        }
+
+        function renderTagAdminPanel() {
+            const allComments = getAllComments();
+            const tags = getAllTags();
+            const untaggedCount = allComments.filter(c => !c.tags || c.tags.length === 0).length;
+
+            // Stats
+            const statsEl = document.getElementById('tag-admin-stats');
+            statsEl.innerHTML = `
+                <div class="tag-stat-card">
+                    <span class="tag-stat-value">${tags.length}</span>
+                    <span class="tag-stat-label">Total Tags</span>
+                </div>
+                <div class="tag-stat-card">
+                    <span class="tag-stat-value">${untaggedCount}</span>
+                    <span class="tag-stat-label">Untagged</span>
+                </div>
+                <div class="tag-stat-card">
+                    <span class="tag-stat-value">${allComments.length - untaggedCount}</span>
+                    <span class="tag-stat-label">Tagged</span>
+                </div>
+            `;
+
+            // Tag count badge
+            document.getElementById('tag-count-badge').textContent = tags.length;
+
+            // Tag list
+            const listEl = document.getElementById('tag-admin-list');
+            if (tags.length === 0) {
+                listEl.innerHTML = '<p class="text-muted text-center py-4">No tags yet. Add tags manually or use AI bulk tagging.</p>';
+            } else {
+                listEl.innerHTML = tags.map(({tag, count}) => `
+                    <div class="tag-admin-item">
+                        <div class="tag-admin-item-info">
+                            <span class="tag-pill">${escapeHtml(tag)}</span>
+                            <span class="tag-admin-count">${count} comment${count !== 1 ? 's' : ''}</span>
+                        </div>
+                        <div class="tag-admin-item-actions">
+                            <button onclick="filterByTag('${escapeHtml(tag).replace(/'/g, "\\'")}')" class="btn-icon-sm" title="Filter by this tag">
+                                <i class="fas fa-filter"></i>
+                            </button>
+                            <button onclick="openMergeTagModal('${escapeHtml(tag).replace(/'/g, "\\'")}')" class="btn-icon-sm" title="Merge into another tag">
+                                <i class="fas fa-code-merge"></i>
+                            </button>
+                            <button onclick="deleteTag('${escapeHtml(tag).replace(/'/g, "\\'")}')" class="btn-icon-sm btn-danger" title="Delete tag">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function updateTopTagsWidget() {
+            const tags = getAllTags().slice(0, 5);
+            const listEl = document.getElementById('top-tags-list');
+            if (!listEl) return;
+
+            if (tags.length === 0) {
+                listEl.innerHTML = '<p class="text-muted text-sm">No tags yet</p>';
+            } else {
+                listEl.innerHTML = tags.map(({tag, count}) => `
+                    <button onclick="filterByTag('${escapeHtml(tag).replace(/'/g, "\\'")}')" class="nav-btn tag-filter-btn">
+                        <span class="tag-pill-sm">${escapeHtml(tag)}</span>
+                        <span class="tag-count-sm">${count}</span>
+                    </button>
+                `).join('');
+            }
+        }
+
+        function addNewGlobalTag() {
+            const input = document.getElementById('new-tag-input');
+            const tag = input.value.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+            if (!tag) {
+                showNotification('Please enter a valid tag name', 'warning');
+                return;
+            }
+
+            // Check if tag already exists
+            const existingTags = getAllTags();
+            if (existingTags.some(t => t.tag === tag)) {
+                showNotification('Tag already exists', 'warning');
+                return;
+            }
+
+            input.value = '';
+            showNotification(`Tag "${tag}" created. Apply it to comments from the Tags view.`, 'success');
+            renderTagAdminPanel();
+        }
+
+        function deleteTag(tagToDelete) {
+            if (!confirm(`Delete tag "${tagToDelete}" from all comments?`)) return;
+
+            let removedCount = 0;
+            // Modify original data, not copies
+            for (const reviewer of reviewData.reviewers) {
+                for (const comment of reviewer.comments) {
+                    if (comment.tags && comment.tags.includes(tagToDelete)) {
+                        comment.tags = comment.tags.filter(t => t !== tagToDelete);
+                        removedCount++;
+                    }
+                }
+            }
+
+            scheduleAutoSave();
+            renderTagAdminPanel();
+            updateTopTagsWidget();
+            if (currentView === 'tags') renderTagsView();
+            showNotification(`Removed "${tagToDelete}" from ${removedCount} comment${removedCount !== 1 ? 's' : ''}`, 'success');
+        }
+
+        function clearAllTags() {
+            const tagCount = getAllTags().length;
+
+            if (!confirm(`This will remove ALL ${tagCount} tags from all comments. Are you sure?`)) return;
+
+            let clearedCount = 0;
+            // Modify original data, not copies
+            for (const reviewer of reviewData.reviewers) {
+                for (const comment of reviewer.comments) {
+                    if (comment.tags && comment.tags.length > 0) {
+                        comment.tags = [];
+                        clearedCount++;
+                    }
+                }
+            }
+
+            scheduleAutoSave();
+            renderTagAdminPanel();
+            updateTopTagsWidget();
+            if (currentView === 'tags') renderTagsView();
+            showNotification(`Cleared tags from ${clearedCount} comments`, 'success');
+        }
+
+        function openMergeTagModal(sourceTag) {
+            const tags = getAllTags().filter(t => t.tag !== sourceTag);
+            if (tags.length === 0) {
+                showNotification('No other tags to merge into', 'warning');
+                return;
+            }
+
+            const modal = document.createElement('div');
+            modal.id = 'merge-tag-modal';
+            modal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-[70] p-4';
+            modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+
+            modal.innerHTML = `
+                <div class="bg-white rounded-xl p-6 max-w-md w-full shadow-xl" onclick="event.stopPropagation()">
+                    <h3 class="text-lg font-semibold mb-4"><i class="fas fa-code-merge text-purple-600"></i> Merge Tag</h3>
+                    <p class="text-sm text-gray-600 mb-4">Merge "<strong>${escapeHtml(sourceTag)}</strong>" into another tag:</p>
+                    <select id="merge-target-tag" class="form-input w-full mb-4">
+                        ${tags.map(({tag, count}) => `<option value="${escapeHtml(tag)}">${escapeHtml(tag)} (${count})</option>`).join('')}
+                    </select>
+                    <div class="flex gap-2 justify-end">
+                        <button onclick="this.closest('#merge-tag-modal').remove()" class="btn btn-ghost">Cancel</button>
+                        <button onclick="executeMergeTag('${escapeHtml(sourceTag).replace(/'/g, "\\'")}', document.getElementById('merge-target-tag').value); this.closest('#merge-tag-modal').remove();" class="btn btn-primary">
+                            <i class="fas fa-code-merge"></i> Merge
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+        }
+
+        function executeMergeTag(sourceTag, targetTag) {
+            if (!sourceTag || !targetTag || sourceTag === targetTag) return;
+
+            let mergedCount = 0;
+            // Modify original data, not copies
+            for (const reviewer of reviewData.reviewers) {
+                for (const comment of reviewer.comments) {
+                    if (comment.tags && comment.tags.includes(sourceTag)) {
+                        comment.tags = comment.tags.filter(t => t !== sourceTag);
+                        if (!comment.tags.includes(targetTag)) {
+                            comment.tags.push(targetTag);
+                        }
+                        mergedCount++;
+                    }
+                }
+            }
+
+            scheduleAutoSave();
+            renderTagAdminPanel();
+            updateTopTagsWidget();
+            if (currentView === 'tags') renderTagsView();
+            showNotification(`Merged "${sourceTag}" → "${targetTag}" (${mergedCount} comment${mergedCount !== 1 ? 's' : ''})`, 'success');
+        }
+
+        // Bulk AI Tagging
+        let bulkTaggingInProgress = false;
+        let bulkTaggingCancelled = false;
+        let bulkTaggingMinimized = false;
+
+        // Warn user before leaving if tagging is in progress
+        window.addEventListener('beforeunload', (e) => {
+            if (bulkTaggingInProgress) {
+                e.preventDefault();
+                e.returnValue = 'AI tagging is still in progress. Are you sure you want to leave?';
+                return e.returnValue;
+            }
+        });
+
+        function openBulkTagModal() {
+            document.getElementById('bulk-tag-modal').classList.remove('hidden');
+            document.getElementById('bulk-tag-action-btn').classList.remove('hidden');
+            document.getElementById('bulk-tag-action-btn').innerHTML = '<i class="fas fa-window-minimize"></i> Run in Background';
+            document.getElementById('bulk-tag-cancel-btn').classList.remove('hidden');
+            document.getElementById('bulk-tag-done-btn').classList.add('hidden');
+            document.getElementById('bulk-tag-log').innerHTML = '';
+            bulkTaggingMinimized = false;
+            // Remove bulk-tag indicator if it exists (modal is open, no need for button indicator)
+            hideOpenCodeLoading('bulk-tag');
+            updateBulkTagProgress(0, 0, 0, 0, 'Initializing...');
+        }
+
+        function closeBulkTagModal() {
+            document.getElementById('bulk-tag-modal').classList.add('hidden');
+            bulkTaggingMinimized = false;
+            // Remove bulk-tag indicator when modal closes
+            hideOpenCodeLoading('bulk-tag');
+            // Refresh views if we were on tags view
+            if (currentView === 'tags') {
+                renderTagsView();
+            }
+        }
+
+        function handleBulkTagAction() {
+            // During tagging: minimize to background
+            if (bulkTaggingInProgress) {
+                document.getElementById('bulk-tag-modal').classList.add('hidden');
+                // Add to centralized loading indicators when minimized
+                showOpenCodeLoading('bulk-tag', 'AI Tag Generation in progress...');
+                bulkTaggingMinimized = true;
+            } else {
+                // Not tagging: just close
+                closeBulkTagModal();
+            }
+        }
+
+        function restoreBulkTagModal() {
+            document.getElementById('bulk-tag-modal').classList.remove('hidden');
+            // Remove from centralized indicators when modal is restored
+            hideOpenCodeLoading('bulk-tag');
+            bulkTaggingMinimized = false;
+        }
+
+        function cancelBulkTagging() {
+            if (bulkTaggingInProgress) {
+                bulkTaggingCancelled = true;
+                document.getElementById('bulk-tag-current').textContent = 'Stopping...';
+                document.getElementById('bulk-tag-cancel-btn').disabled = true;
+            }
+        }
+
+        function updateBulkTagProgress(processed, total, uniqueTagCount, percent, currentComment) {
+            // Update modal circular progress
+            const circle = document.getElementById('progress-ring-circle');
+            const circumference = 283; // 2 * PI * 45
+            const offset = circumference - (percent / 100) * circumference;
+            circle.style.strokeDashoffset = offset;
+
+            // Update modal text
+            document.getElementById('bulk-tag-percent').textContent = `${percent}%`;
+            document.getElementById('bulk-tag-processed').textContent = processed;
+            document.getElementById('bulk-tag-total').textContent = total;
+            document.getElementById('bulk-tag-unique').textContent = uniqueTagCount;
+            document.getElementById('bulk-tag-current').textContent = currentComment;
+
+            // Update processing button badge (for background mode)
+            document.getElementById('processing-count').textContent = `${percent}%`;
+        }
+
+        function addBulkTagLogEntry(commentId, tags, isError = false) {
+            const log = document.getElementById('bulk-tag-log');
+            const entry = document.createElement('div');
+            entry.className = `bulk-tag-log-entry ${isError ? 'error' : 'success'}`;
+
+            if (isError) {
+                entry.innerHTML = `<span class="comment-id">${commentId}</span> <span class="tags">Failed</span>`;
+            } else if (tags.length === 0) {
+                entry.innerHTML = `<span class="comment-id">${commentId}</span> <span class="tags">No new tags</span>`;
+            } else {
+                entry.innerHTML = `<span class="comment-id">${commentId}</span> <span class="tags">+${tags.join(', +')}</span>`;
+            }
+
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        async function startBulkAITagging() {
+            if (bulkTaggingInProgress) return;
+
+            const allComments = getAllComments();
+            const untaggedComments = allComments.filter(c => !c.tags || c.tags.length === 0);
+
+            const targetComments = untaggedComments.length > 0 ? untaggedComments : allComments;
+            const message = untaggedComments.length > 0
+                ? `Tag ${untaggedComments.length} untagged comments with AI?`
+                : `Re-tag all ${allComments.length} comments with AI? (existing tags will be preserved)`;
+
+            if (!confirm(message)) return;
+
+            bulkTaggingInProgress = true;
+            bulkTaggingCancelled = false;
+
+            // Update button in slide panel if visible
+            const btn = document.getElementById('bulk-ai-tag-btn');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            }
+
+            // Open progress modal
+            openBulkTagModal();
+
+            // Track existing domain tags for consistency across comments
+            const existingDomainTags = getAllTags()
+                .map(t => t.tag)
+                .filter(t => !TAG_TAXONOMY.topic.includes(t) && !TAG_TAXONOMY.action.includes(t));
+
+            let processed = 0;
+            let totalTagsAdded = 0;
+
+            try {
+                for (const comment of targetComments) {
+                    // Check for cancellation
+                    if (bulkTaggingCancelled) {
+                        addBulkTagLogEntry('---', [], false);
+                        document.getElementById('bulk-tag-current').textContent = `Cancelled after ${processed} comments`;
+                        break;
+                    }
+
+                    // Update progress
+                    processed++;
+                    const pct = Math.round((processed / targetComments.length) * 100);
+                    updateBulkTagProgress(processed, targetComments.length, totalTagsAdded, pct, `Processing ${comment.id}...`);
+
+                    try {
+                        const tags = await getAITagsForComment(comment, existingDomainTags);
+                        const newTags = [];
+
+                        if (tags.length > 0) {
+                            if (!comment.tags) comment.tags = [];
+                            for (const tag of tags) {
+                                // Skip if already has this tag
+                                if (comment.tags.includes(tag)) continue;
+
+                                comment.tags.push(tag);
+                                newTags.push(tag);
+                                totalTagsAdded++;
+
+                                // Track new domain tags for consistency
+                                if (!TAG_TAXONOMY.topic.includes(tag) &&
+                                    !TAG_TAXONOMY.action.includes(tag) &&
+                                    !existingDomainTags.includes(tag)) {
+                                    existingDomainTags.push(tag);
+                                }
+                            }
+                        }
+
+                        addBulkTagLogEntry(comment.id, newTags, false);
+                    } catch (e) {
+                        console.error(`Failed to tag ${comment.id}:`, e);
+                        addBulkTagLogEntry(comment.id, [], true);
+                    }
+
+                    // Small delay to avoid rate limiting
+                    await new Promise(r => setTimeout(r, 300));
+                }
+
+                scheduleAutoSave();
+                renderTagAdminPanel();
+                updateTopTagsWidget();
+
+                // Show completion state
+                if (!bulkTaggingCancelled) {
+                    updateBulkTagProgress(processed, targetComments.length, totalTagsAdded, 100, 'Complete!');
+                    showNotification(`AI tagging complete! Added ${totalTagsAdded} tags to ${processed} comments.`, 'success');
+                    // Mark indicator as complete (green)
+                    document.getElementById('bulk-tag-indicator').classList.add('complete');
+                }
+
+            } catch (e) {
+                console.error('Bulk tagging error:', e);
+                document.getElementById('bulk-tag-current').textContent = 'Error: ' + e.message;
+                showNotification('Bulk tagging failed. Check console for details.', 'error');
+            } finally {
+                bulkTaggingInProgress = false;
+
+                // Update buttons
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-magic"></i> Tag All Comments with AI';
+                }
+
+                // Show done button, hide action and cancel buttons
+                document.getElementById('bulk-tag-action-btn').classList.add('hidden');
+                document.getElementById('bulk-tag-cancel-btn').classList.add('hidden');
+                document.getElementById('bulk-tag-cancel-btn').disabled = false;
+                document.getElementById('bulk-tag-done-btn').classList.remove('hidden');
+
+                // Remove bulk-tag from centralized indicators (will auto-hide button if no other tasks)
+                hideOpenCodeLoading('bulk-tag');
+            }
+        }
+
+        async function getAITagsForComment(comment, existingDomainTags) {
+            // Build domain list: base + any existing domain tags from this paper
+            const domainList = [...new Set([...TAG_TAXONOMY.domain, ...existingDomainTags])];
+
+            const prompt = `Tag this reviewer comment using our 3-dimension taxonomy.
+
+COMMENT: "${comment.original_text.substring(0, 400)}"
+CATEGORY: ${comment.category || 'General'}
+
+TAXONOMY (pick exactly 1 from each dimension):
+
+DOMAIN (field/context): ${domainList.join(', ')}
+
+TOPIC (what's criticized): ${TAG_TAXONOMY.topic.join(', ')}
+
+ACTION (how to fix): ${TAG_TAXONOMY.action.join(', ')}
+
+RULES:
+- Pick exactly 1 DOMAIN tag (the scientific field this relates to)
+- Pick exactly 1 TOPIC tag (what aspect is being criticized)
+- Pick 1-2 ACTION tags (what needs to be done)
+- Use ONLY tags from the lists above
+- Only create a new DOMAIN tag if the field is truly not covered (rare)
+
+Return ONLY a JSON object: {"domain": "x", "topic": "y", "actions": ["z"]}`;
+
+            const response = await fetch(`${API_BASE}/ask`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    prompt: prompt,
+                    comment_id: comment.id + '_tags',
+                    model: aiSettings.model,
+                    agent: 'general',
+                    variant: 'low'
+                })
+            });
+
+            if (!response.ok) throw new Error('API request failed');
+
+            const result = await response.json();
+            let tags = [];
+
+            try {
+                // Parse JSON response using robust extraction
+                const parsed = extractJsonFromResponse(result.response);
+                if (parsed) {
+                    // Validate and collect tags
+                    if (parsed.domain) tags.push(parsed.domain.toLowerCase().trim());
+                    if (parsed.topic) tags.push(parsed.topic.toLowerCase().trim());
+                    if (parsed.actions) {
+                        const actions = Array.isArray(parsed.actions) ? parsed.actions : [parsed.actions];
+                        tags.push(...actions.map(a => a.toLowerCase().trim()));
+                    }
+                }
+            } catch (parseErr) {
+                console.error('Failed to parse AI tag response:', parseErr);
+                // Fallback: try to extract any valid tags
+                const words = result.response.toLowerCase().match(/\b[a-z]+\b/g) || [];
+                const allValidTags = [...TAG_TAXONOMY.domain, ...TAG_TAXONOMY.topic, ...TAG_TAXONOMY.action];
+                tags = words.filter(w => allValidTags.includes(w)).slice(0, 4);
+            }
+
+            // Clean and validate tags
+            return tags
+                .map(t => t.replace(/[^a-z]/g, ''))
+                .filter(t => t && t.length > 1 && t.length < 20);
+        }
+
+        // Tags Main View
+        function renderTagsView() {
+            const allComments = getAllComments();
+            const tags = getAllTags();
+            const tagsByDim = getTagsByDimension();
+            const untaggedCount = allComments.filter(c => !c.tags || c.tags.length === 0).length;
+            const taggedCount = allComments.length - untaggedCount;
+
+            // Helper to render a tag section
+            const renderTagSection = (title, icon, colorClass, tagsArray) => {
+                if (tagsArray.length === 0) return '';
+                return `
+                    <div class="tag-dimension-section">
+                        <h3 class="tag-dimension-title ${colorClass}">
+                            <i class="fas ${icon}"></i> ${title}
+                            <span class="tag-dimension-count">${tagsArray.length}</span>
+                        </h3>
+                        <div class="tag-dimension-grid">
+                            ${tagsArray.map(({tag, count}) => `
+                                <div class="tag-chip ${colorClass}" onclick="filterByTag('${escapeHtml(tag).replace(/'/g, "\\'")}')">
+                                    <span class="tag-chip-name">${escapeHtml(tag)}</span>
+                                    <span class="tag-chip-count">${count}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            };
+
+            const html = `
+                <!-- Stats Cards -->
+                <div class="tags-view-stats">
+                    <div class="stat-card purple">
+                        <div class="stat-icon"><i class="fas fa-flask"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-value">${tagsByDim.domain.length}</span>
+                            <span class="stat-label">Domains</span>
+                        </div>
+                    </div>
+                    <div class="stat-card green">
+                        <div class="stat-icon"><i class="fas fa-crosshairs"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-value">${tagsByDim.topic.length}</span>
+                            <span class="stat-label">Topics</span>
+                        </div>
+                    </div>
+                    <div class="stat-card amber">
+                        <div class="stat-icon"><i class="fas fa-bolt"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-value">${tagsByDim.action.length}</span>
+                            <span class="stat-label">Actions</span>
+                        </div>
+                    </div>
+                    <div class="stat-card blue">
+                        <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-value">${taggedCount}/${allComments.length}</span>
+                            <span class="stat-label">Tagged</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions Bar -->
+                <div class="tags-view-actions">
+                    <div class="flex gap-2 items-center">
+                        <button onclick="openTagAdminPanel()" class="btn btn-secondary">
+                            <i class="fas fa-cog"></i> Manage
+                        </button>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="clearAllTags()" class="btn btn-ghost btn-danger-outline">
+                            <i class="fas fa-trash"></i> Clear All
+                        </button>
+                        <button onclick="startBulkAITagging()" class="btn btn-primary">
+                            <i class="fas fa-magic"></i> AI Tag All
+                        </button>
+                    </div>
+                </div>
+
+                ${tags.length === 0 ? `
+                    <div class="tags-empty">
+                        <i class="fas fa-tags"></i>
+                        <h3>No Tags Yet</h3>
+                        <p>Use AI bulk tagging to automatically categorize all comments into Domain, Topic, and Action tags.</p>
+                        <button onclick="startBulkAITagging()" class="btn btn-secondary" style="margin-top: 1rem; border-color: var(--vermillion); color: var(--vermillion);">
+                            <i class="fas fa-magic" style="font-size: inherit; color: inherit; display: inline; margin: 0;"></i> Start AI Tagging
+                        </button>
+                    </div>
+                ` : `
+                    <!-- Tag Dimensions -->
+                    <div class="tag-dimensions">
+                        ${renderTagSection('Domain', 'fa-flask', 'domain', tagsByDim.domain)}
+                        ${renderTagSection('Topic', 'fa-crosshairs', 'topic', tagsByDim.topic)}
+                        ${renderTagSection('Action', 'fa-bolt', 'action', tagsByDim.action)}
+                    </div>
+                `}
+            `;
+
+            document.getElementById('content-area').innerHTML = html;
+        }
+
+        function filterTagsView(query) {
+            const cards = document.querySelectorAll('.tag-card');
+            const q = query.toLowerCase();
+            cards.forEach(card => {
+                const tag = card.dataset.tag.toLowerCase();
+                card.style.display = tag.includes(q) ? '' : 'none';
+            });
+        }
+
         function closeModal() {
             document.getElementById('comment-modal').classList.add('hidden');
             editingComment = null;
@@ -7420,7 +8783,8 @@ Your response:`;
                 draft_response: comment.draft_response || '',
                 status: comment.status || 'pending',
                 priority: comment.priority || 'medium',
-                type: comment.type || 'minor'
+                type: comment.type || 'minor',
+                tags: (comment._originalTags || comment.tags || []).join(',')
             };
 
             // Get new values from fields that exist in the modal
@@ -7429,11 +8793,12 @@ Your response:`;
 
             const newValues = {
                 status: statusEl ? statusEl.value : comment.status,
-                draft_response: responseEl ? responseEl.value : comment.draft_response
+                draft_response: responseEl ? responseEl.value : comment.draft_response,
+                tags: (comment.tags || []).join(',')
             };
 
             // Track version history for important field changes
-            const fieldsToTrack = ['draft_response', 'status'];
+            const fieldsToTrack = ['draft_response', 'status', 'tags'];
             for (const field of fieldsToTrack) {
                 if (oldValues[field] !== newValues[field]) {
                     await saveVersionHistoryEntry(
@@ -7450,6 +8815,8 @@ Your response:`;
             // Apply new values
             comment.status = newValues.status;
             comment.draft_response = newValues.draft_response;
+            // Tags are already updated via addTag/removeTag, clear the original snapshot
+            delete comment._originalTags;
 
             // If response changed, check for related comments and notify
             const responseChanged = oldValues.draft_response !== newValues.draft_response && newValues.draft_response.length > 0;
