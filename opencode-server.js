@@ -3931,6 +3931,56 @@ function startApiServer(port = 3001) {
                     const selectedIds = exportData.selectedCommentIds || [];
                     const children = [];
 
+                    // Try to load original documents from reviews folder if not provided
+                    const paperDir = path.join(PROJECT_FOLDER || BASE_DIR, 'papers', paperId);
+                    const reviewsDir = path.join(paperDir, 'reviews');
+
+                    if (fs.existsSync(reviewsDir)) {
+                        const reviewFiles = fs.readdirSync(reviewsDir).filter(f =>
+                            f.endsWith('.txt') || f.endsWith('.md')
+                        );
+
+                        // Try to match review files to reviewers by source_file or name
+                        for (const reviewer of exportData.reviewers || []) {
+                            if (!reviewer.original_document) {
+                                // Try to find matching file
+                                let matchedFile = null;
+
+                                // First try source_file match
+                                if (reviewer.source_file) {
+                                    const baseName = path.basename(reviewer.source_file, path.extname(reviewer.source_file));
+                                    matchedFile = reviewFiles.find(f =>
+                                        f.includes(baseName) || baseName.includes(path.basename(f, path.extname(f)))
+                                    );
+                                }
+
+                                // Try name-based match
+                                if (!matchedFile) {
+                                    const reviewerNum = reviewer.name?.match(/\d+/)?.[0];
+                                    if (reviewerNum) {
+                                        matchedFile = reviewFiles.find(f =>
+                                            f.toLowerCase().includes(`reviewer${reviewerNum}`) ||
+                                            f.toLowerCase().includes(`reviewer_${reviewerNum}`) ||
+                                            f.toLowerCase().includes(`referee${reviewerNum}`) ||
+                                            f.toLowerCase().includes(`r${reviewerNum}`)
+                                        );
+                                    }
+                                }
+
+                                // Read the matched file
+                                if (matchedFile) {
+                                    try {
+                                        const filePath = path.join(reviewsDir, matchedFile);
+                                        reviewer.original_document = fs.readFileSync(filePath, 'utf-8');
+                                        log(`Loaded original document for ${reviewer.name} from ${matchedFile}`);
+                                    } catch (e) {
+                                        log(`Could not read ${matchedFile}: ${e.message}`, 'WARN');
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     // ========== PART 1: SELECTED COMMENTS WITH SPACE FOR RESPONSE ==========
 
                     // Title

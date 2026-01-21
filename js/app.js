@@ -10197,6 +10197,7 @@ Provide expert guidance based on the manuscript context you have loaded. Be scie
                     reviewers: reviewData.reviewers.map(r => ({
                         name: r.name,
                         expertise: r.expertise || '',
+                        source_file: r.source_file || '',
                         original_document: r.original_document || '',
                         comments: r.comments.map(c => {
                             const expertData = expertDiscussions?.expert_discussions?.[c.id];
