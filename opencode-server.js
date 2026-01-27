@@ -1197,7 +1197,7 @@ function saveJSON(filepath, data) {
 // =====================================================
 
 // Current schema version
-const SCHEMA_VERSION = 14;
+const SCHEMA_VERSION = 18;
 
 // Migration definitions - each adds new features
 const MIGRATIONS = {
@@ -1485,6 +1485,13 @@ const MIGRATIONS = {
         up: `
             ALTER TABLE reviewers ADD COLUMN document_id TEXT REFERENCES documents(id);
         `
+    },
+    18: {
+        description: 'Add is_favorite column to comments for bookmarking',
+        up: `
+            ALTER TABLE comments ADD COLUMN is_favorite INTEGER DEFAULT 0;
+            CREATE INDEX IF NOT EXISTS idx_comments_favorite ON comments(is_favorite);
+        `
     }
 };
 
@@ -1605,8 +1612,8 @@ function saveCommentsToDB(reviewData, paperId = null) {
         const stmt = db.prepare(`
             INSERT OR REPLACE INTO comments
             (id, paper_id, reviewer_id, reviewer_name, type, category, original_text, full_context,
-             draft_response, status, priority, location, requires_new_analysis, tags, sort_order, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+             draft_response, status, priority, location, requires_new_analysis, tags, sort_order, is_favorite, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
         `);
 
         const transaction = db.transaction((reviewers) => {
@@ -1640,13 +1647,39 @@ function saveCommentsToDB(reviewData, paperId = null) {
                         comment.location || '',
                         comment.requires_new_analysis ? 1 : 0,
                         tagsStr,
-                        comment.sort_order ?? sortOrder++
+                        comment.sort_order ?? sortOrder++,
+                        comment.is_favorite ? 1 : 0
                     );
                 }
             }
         });
 
         transaction(reviewData.reviewers || []);
+
+        // Also save reviewer metadata (original_document, expertise, etc.) to reviewers table
+        if (paperId) {
+            const reviewerStmt = db.prepare(`
+                INSERT OR REPLACE INTO reviewers
+                (id, paper_id, name, expertise, overall_sentiment, original_document)
+                VALUES (?, ?, ?, ?, ?, ?)
+            `);
+
+            for (const reviewer of (reviewData.reviewers || [])) {
+                const reviewerId = !reviewer.id.startsWith(`${paperId}_`)
+                    ? `${paperId}_${reviewer.id}`
+                    : reviewer.id;
+
+                reviewerStmt.run(
+                    reviewerId,
+                    paperId,
+                    reviewer.name || '',
+                    reviewer.expertise || '',
+                    reviewer.overall_assessment || '',
+                    reviewer.original_document || ''
+                );
+            }
+        }
+
         log(`Saved ${reviewData.reviewers?.reduce((acc, r) => acc + r.comments.length, 0) || 0} comments to database${paperId ? ` for paper ${paperId}` : ''}`);
         return true;
     } catch (e) {
@@ -1667,13 +1700,35 @@ function loadCommentsFromDB(paperId = null) {
             comments = db.prepare('SELECT * FROM comments ORDER BY sort_order, id').all();
         }
 
+        // Load reviewer metadata from reviewers table
+        let reviewerMetadata = {};
+        if (paperId) {
+            try {
+                const reviewers = db.prepare('SELECT * FROM reviewers WHERE paper_id = ?').all(paperId);
+                for (const r of reviewers) {
+                    reviewerMetadata[r.id] = {
+                        expertise: r.expertise || '',
+                        overall_assessment: r.overall_sentiment || '',
+                        original_document: r.original_document || ''
+                    };
+                }
+            } catch (e) {
+                // Table might not exist yet in older databases
+                log(`Note: Could not load reviewer metadata: ${e.message}`, 'DEBUG');
+            }
+        }
+
         // Group by reviewer
         const reviewerMap = {};
         for (const c of comments) {
             if (!reviewerMap[c.reviewer_id]) {
+                const meta = reviewerMetadata[c.reviewer_id] || {};
                 reviewerMap[c.reviewer_id] = {
                     id: c.reviewer_id,
                     name: c.reviewer_name,
+                    expertise: meta.expertise || '',
+                    overall_assessment: meta.overall_assessment || '',
+                    original_document: meta.original_document || '',
                     comments: []
                 };
             }
@@ -1689,7 +1744,8 @@ function loadCommentsFromDB(paperId = null) {
                 location: c.location,
                 requires_new_analysis: c.requires_new_analysis === 1,
                 tags: c.tags ? c.tags.split(',').filter(t => t) : [],
-                sort_order: c.sort_order || 0
+                sort_order: c.sort_order || 0,
+                is_favorite: c.is_favorite === 1
             });
         }
 
@@ -1761,8 +1817,9 @@ function loadExpertsFromDB(paperId = null) {
 
         // Join expert_discussions with comments to get full context
         // Comment IDs in expert_discussions now have paper prefix like "14464bea_R1.1"
-        const rows = db.prepare(`
-            SELECT
+        // Filter by paper_id to avoid cross-paper data contamination
+        const query = paperId
+            ? `SELECT
                 e.comment_id,
                 e.experts,
                 e.recommended_response,
@@ -1775,7 +1832,23 @@ function loadExpertsFromDB(paperId = null) {
                 c.original_text as reviewer_comment
             FROM expert_discussions e
             LEFT JOIN comments c ON c.id = e.comment_id
-        `).all();
+            WHERE e.comment_id LIKE ? || '_%'`
+            : `SELECT
+                e.comment_id,
+                e.experts,
+                e.recommended_response,
+                e.advice_to_author,
+                e.potential_solutions,
+                e.regenerated_at,
+                c.type,
+                c.priority,
+                c.category,
+                c.original_text as reviewer_comment
+            FROM expert_discussions e
+            LEFT JOIN comments c ON c.id = e.comment_id`;
+        const rows = paperId
+            ? db.prepare(query).all(paperId)
+            : db.prepare(query).all();
         const discussions = {};
 
         for (const row of rows) {
@@ -4623,34 +4696,71 @@ function startApiServer(port = 3001) {
         if (req.method === 'GET' && paperReviewFilesMatch) {
             const paperId = paperReviewFilesMatch[1];
             try {
-                // Look for review files in the paper's reviews folder
-                const paperReviewsDir = path.join(PROJECT_FOLDER || BASE_DIR, 'papers', paperId, 'reviews');
+                const paperDir = path.join(PROJECT_FOLDER || BASE_DIR, 'papers', paperId);
+                const paperReviewsDir = path.join(paperDir, 'reviews');
+                let files = [];
 
-                if (!fs.existsSync(paperReviewsDir)) {
-                    res.writeHead(200, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ files: [], message: 'No reviews folder found' }));
-                    return;
+                // Helper to add files from a directory
+                const addFilesFrom = (dir, isReviewDir = false) => {
+                    if (!fs.existsSync(dir)) return;
+                    const dirFiles = fs.readdirSync(dir)
+                        .filter(f => {
+                            // Skip hidden/system files
+                            if (f.startsWith('.') || f.startsWith('_')) return false;
+                            const ext = path.extname(f).toLowerCase();
+                            // For paper root, only include files that look like reviews
+                            if (!isReviewDir) {
+                                const lowerName = f.toLowerCase();
+                                if (!lowerName.includes('review') && !lowerName.includes('referee') && !lowerName.includes('comment')) {
+                                    return false;
+                                }
+                            }
+                            return ['.txt', '.docx', '.pdf', '.md'].includes(ext);
+                        })
+                        .map(f => {
+                            const filePath = path.join(dir, f);
+                            const stats = fs.statSync(filePath);
+                            const sizeKB = (stats.size / 1024).toFixed(1);
+                            return {
+                                name: f,
+                                path: filePath,
+                                size: stats.size,
+                                sizeHuman: sizeKB > 1024 ? `${(sizeKB / 1024).toFixed(1)} MB` : `${sizeKB} KB`,
+                                source: isReviewDir ? 'reviews/' : 'paper root'
+                            };
+                        });
+                    files = files.concat(dirFiles);
+                };
+
+                // Check reviews subdirectory first
+                addFilesFrom(paperReviewsDir, true);
+
+                // Also check paper root for review-related files
+                addFilesFrom(paperDir, false);
+
+                // Also check documents table for review category files
+                const reviewDocs = getDocuments(paperId, 'reviews');
+                for (const doc of reviewDocs) {
+                    // Check if we already have this file
+                    const alreadyAdded = files.some(f => f.path === doc.file_path || f.path === doc.converted_path);
+                    if (!alreadyAdded) {
+                        const checkPath = doc.converted_path || doc.file_path;
+                        if (checkPath && fs.existsSync(checkPath)) {
+                            const stats = fs.statSync(checkPath);
+                            const sizeKB = (stats.size / 1024).toFixed(1);
+                            files.push({
+                                name: doc.original_filename,
+                                path: checkPath,
+                                size: stats.size,
+                                sizeHuman: sizeKB > 1024 ? `${(sizeKB / 1024).toFixed(1)} MB` : `${sizeKB} KB`,
+                                source: 'database'
+                            });
+                        }
+                    }
                 }
 
-                const files = fs.readdirSync(paperReviewsDir)
-                    .filter(f => {
-                        const ext = path.extname(f).toLowerCase();
-                        return ['.txt', '.docx', '.pdf', '.md'].includes(ext);
-                    })
-                    .map(f => {
-                        const filePath = path.join(paperReviewsDir, f);
-                        const stats = fs.statSync(filePath);
-                        const sizeKB = (stats.size / 1024).toFixed(1);
-                        return {
-                            name: f,
-                            path: filePath,
-                            size: stats.size,
-                            sizeHuman: sizeKB > 1024 ? `${(sizeKB / 1024).toFixed(1)} MB` : `${sizeKB} KB`
-                        };
-                    });
-
                 res.writeHead(200, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ files, folder: paperReviewsDir }));
+                res.end(JSON.stringify({ files, folder: paperDir }));
             } catch (e) {
                 console.error('Error getting review files:', e);
                 res.writeHead(500, { 'Content-Type': 'application/json' });

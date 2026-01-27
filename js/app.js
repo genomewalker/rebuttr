@@ -49,13 +49,30 @@ const API_BASE = 'http://localhost:3001';
 
         // Get validated expert data for a comment (returns null if clearly mismatched)
         function getValidatedExpertData(commentId, comment) {
-            const rawData = expertDiscussions?.expert_discussions?.[commentId];
+            // Try both paper-prefixed key and plain key for backwards compatibility
+            const prefixedKey = currentPaperId ? `${currentPaperId}_${commentId}` : commentId;
+            const rawData = expertDiscussions?.expert_discussions?.[prefixedKey]
+                         || expertDiscussions?.expert_discussions?.[commentId];
             if (!rawData) return null;
             if (!validateExpertData(rawData, comment)) {
                 console.warn(`Expert data mismatch for ${commentId} - text doesn't match`);
                 return null;
             }
             return rawData;
+        }
+
+        // Get the expert discussion key for a comment (with paper prefix if available)
+        function getExpertKey(commentId) {
+            // Check if data exists with paper prefix first, then fallback to plain key
+            const prefixedKey = currentPaperId ? `${currentPaperId}_${commentId}` : commentId;
+            if (expertDiscussions?.expert_discussions?.[prefixedKey]) {
+                return prefixedKey;
+            }
+            if (expertDiscussions?.expert_discussions?.[commentId]) {
+                return commentId;
+            }
+            // Default to prefixed key for new entries
+            return prefixedKey;
         }
 
         // Normalize solution data to handle both string and object formats
@@ -1165,6 +1182,7 @@ Ask me anything about this comment, or request a draft response.`;
 
         let importCurrentStep = 1;
         let extractedCommentsData = [];
+        let reExtractReviewerId = null;
 
         function openImportReviewsModal() {
             document.getElementById('import-reviews-modal').classList.remove('hidden');
@@ -1176,6 +1194,26 @@ Ask me anything about this comment, or request a draft response.`;
             document.getElementById('import-reviews-modal').classList.add('hidden');
             importCurrentStep = 1;
             extractedCommentsData = [];
+
+            // Reset re-extract state
+            reExtractReviewerId = null;
+
+            // Restore modal title
+            const modalTitle = document.querySelector('#import-reviews-modal .modal-title');
+            if (modalTitle) {
+                modalTitle.innerHTML = '<i class="fas fa-file-import"></i> Import & parse reviews with AI';
+            }
+
+            // Restore button text
+            const nextBtn = document.getElementById('import-next-btn');
+            if (nextBtn) {
+                nextBtn.innerHTML = '<i class="fas fa-magic"></i> Extract comments';
+            }
+
+            // Clear form
+            document.getElementById('raw-reviews-input').value = '';
+            document.getElementById('reviewer-id-input').value = 'R1';
+            document.getElementById('reviewer-name-input').value = 'Referee #1';
         }
 
         function updateImportStepUI() {
@@ -1184,32 +1222,41 @@ Ask me anything about this comment, or request a draft response.`;
                 const stepEl = document.getElementById(`import-step-${i}`);
                 const contentEl = document.getElementById(`import-step-content-${i}`);
 
-                if (i < importCurrentStep) {
-                    stepEl.classList.remove('opacity-50');
-                    stepEl.querySelector('span:first-child').className = 'w-7 h-7 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-bold';
-                } else if (i === importCurrentStep) {
-                    stepEl.classList.remove('opacity-50');
-                    stepEl.querySelector('span:first-child').className = 'w-7 h-7 rounded-full bg-purple-600 text-white flex items-center justify-center text-sm font-bold';
-                } else {
-                    stepEl.classList.add('opacity-50');
-                    stepEl.querySelector('span:first-child').className = 'w-7 h-7 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center text-sm font-bold';
+                // Only update step indicators if they exist
+                if (stepEl) {
+                    if (i < importCurrentStep) {
+                        stepEl.classList.remove('opacity-50');
+                        stepEl.querySelector('span:first-child').className = 'w-7 h-7 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-bold';
+                    } else if (i === importCurrentStep) {
+                        stepEl.classList.remove('opacity-50');
+                        stepEl.querySelector('span:first-child').className = 'w-7 h-7 rounded-full bg-purple-600 text-white flex items-center justify-center text-sm font-bold';
+                    } else {
+                        stepEl.classList.add('opacity-50');
+                        stepEl.querySelector('span:first-child').className = 'w-7 h-7 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center text-sm font-bold';
+                    }
                 }
 
-                contentEl.classList.toggle('hidden', i !== importCurrentStep);
+                if (contentEl) {
+                    contentEl.classList.toggle('hidden', i !== importCurrentStep);
+                }
             }
 
             // Update buttons
             const prevBtn = document.getElementById('import-prev-btn');
             const nextBtn = document.getElementById('import-next-btn');
 
-            prevBtn.classList.toggle('hidden', importCurrentStep === 1);
+            if (prevBtn) {
+                prevBtn.classList.toggle('hidden', importCurrentStep === 1);
+            }
 
-            if (importCurrentStep === 1) {
-                nextBtn.innerHTML = '<i class="fas fa-magic mr-1"></i>Extract Comments';
-            } else if (importCurrentStep === 2) {
-                nextBtn.innerHTML = '<i class="fas fa-brain mr-1"></i>Generate expert analysis';
-            } else {
-                nextBtn.innerHTML = '<i class="fas fa-check mr-1"></i>Import to Rebuttr';
+            if (nextBtn) {
+                if (importCurrentStep === 1) {
+                    nextBtn.innerHTML = '<i class="fas fa-magic mr-1"></i>Extract Comments';
+                } else if (importCurrentStep === 2) {
+                    nextBtn.innerHTML = '<i class="fas fa-brain mr-1"></i>Generate expert analysis';
+                } else {
+                    nextBtn.innerHTML = '<i class="fas fa-check mr-1"></i>Import to Rebuttr';
+                }
             }
         }
 
@@ -1244,53 +1291,129 @@ Ask me anything about this comment, or request a draft response.`;
             document.getElementById('import-processing').classList.remove('hidden');
             document.getElementById('import-processing-status').textContent = 'Extracting and categorizing comments with AI...';
 
-            const extractionPrompt = `Extract ALL individual comments from this peer review with MAXIMUM GRANULARITY.
+            // Check if we're in re-extract mode and build existing comments context
+            let existingCommentsContext = '';
+            if (reExtractReviewerId) {
+                const existingReviewer = reviewData.reviewers.find(r => r.id === reExtractReviewerId);
+                if (existingReviewer && existingReviewer.comments.length > 0) {
+                    // Build semantic summary for each existing comment
+                    const existingCommentsSummary = existingReviewer.comments.map(c => {
+                        const location = c.location || 'General';
+                        const category = c.category || 'Unknown';
+                        const textPreview = c.original_text.substring(0, 200).replace(/\n/g, ' ');
+                        return `- [${c.id}] ${category} @ ${location}: "${textPreview}..."`;
+                    }).join('\n');
 
-## CRITICAL: SPLIT INTO SEPARATE COMMENTS
+                    existingCommentsContext = `
+## EXISTING COMMENTS - SEMANTIC DEDUPLICATION REQUIRED
+This reviewer already has ${existingReviewer.comments.length} extracted comments. You MUST use SEMANTIC comparison to avoid duplicates.
+
+### EXISTING COMMENTS (with category and location):
+${existingCommentsSummary}
+
+### SEMANTIC DEDUPLICATION RULES:
+1. **Same Topic = SKIP**: If a potential new comment addresses the SAME CONCERN as an existing one, skip it even if worded differently
+2. **Same Location = Likely Duplicate**: Comments about the same line/figure are probably duplicates
+3. **Same Category + Similar Theme = SKIP**: e.g., two "Methods" comments about authentication are duplicates
+4. **Rephrasings = SKIP**: "Figure 1 needs clarification" and "Clarify Figure 1" are the SAME comment
+5. **Sub-points of existing = SKIP**: If existing comment covers "database selection", don't extract "use permafrost databases"
+
+### WHAT TO EXTRACT:
+- Comments about DIFFERENT topics not covered above
+- Comments about DIFFERENT line numbers/figures
+- Specific actionable items that require a SEPARATE response
+- Points from completely different paragraphs of the review
+
+### EXTRACTION TEST:
+Before extracting, ask: "Would the author need to write a SEPARATE response paragraph for this, or is it addressed by an existing comment?"
+If addressed by existing → SKIP
+
+`;
+                }
+            }
+
+            // Build reviewer section instruction for re-extraction mode
+            const reviewerSectionInstruction = reExtractReviewerId ? `
+## CRITICAL: EXTRACT FROM SPECIFIC REVIEWER ONLY
+The document contains comments from MULTIPLE reviewers. You MUST:
+1. ONLY extract comments from the section belonging to "${reviewerName}"
+2. Look for headers like "Referee #3", "Reviewer 3", "${reviewerName}", or similar
+3. COMPLETELY IGNORE all other reviewers' sections (Referee #1, #2, #4, etc.)
+4. If you cannot identify the correct reviewer section, extract NOTHING
+
+` : '';
+
+            const extractionPrompt = `Extract ALL individual reviewer comments with MAXIMUM GRANULARITY.
+${reviewerSectionInstruction}${existingCommentsContext}
+## EXTRACTION RULES
+
+### Split aggressively:
 - Every LINE NUMBER reference = separate comment
-- Every FIGURE reference = separate comment
-- Every DISTINCT POINT = separate comment
-- A reviewer's single paragraph may contain 3-5+ separate actionable items
+- Every FIGURE/TABLE reference = separate comment
+- Every QUESTION = separate comment
+- Every SUGGESTION ("should", "could", "recommend", "consider") = separate comment
+- Every CONCERN = separate comment
+- Narrative paragraphs often contain 3-5+ hidden actionable items
 
-REVIEWER: ${reviewerName} (ID: ${reviewerId})
+### What to extract from paragraphs:
+- Explicit criticisms AND implicit suggestions
+- "This is unclear" → extract as clarification request
+- "I am unconvinced" → extract the specific concern
+- "This could be shown by X" → extract as request for analysis X
+- Multi-sentence concerns: split if they require different responses
+
+### Category definitions:
+- Validation: requests for additional proof/evidence/tests
+- Methods: concerns about methodology or parameters
+- Interpretation: disagreement with conclusions drawn
+- Clarity: wording, terminology, or explanation issues
+- Citation: missing or incorrect references
+- Figure: any figure/table related issue
+
+TARGET REVIEWER: ${reviewerName} (ID: ${reviewerId})${reExtractReviewerId ? ' - ONLY extract from this reviewer\'s section!' : ''}
 
 RAW TEXT:
 """
 ${rawText}
 """
 
-TASK: Extract EVERY SINGLE distinct point. A detailed review typically has 15-40+ points. If extracting <10 from a thorough review, you're merging too much.
+TASK: Extract EVERY actionable point. Typical thorough reviews have 40-80+ distinct points.${reExtractReviewerId ? ' Only extract points NOT already in the existing comments list.' : ''}
 
 Return JSON:
 {
   "reviewer": {
     "id": "${reviewerId}",
     "name": "${reviewerName}",
-    "expertise": "Infer from comments",
-    "overall_assessment": "Brief summary of stance"
+    "expertise": "Inferred expertise area",
+    "overall_assessment": "Brief summary: positive/negative/mixed"
   },
   "comments": [
     {
       "id": "${reviewerId}-1",
       "type": "major|minor",
-      "category": "Category",
-      "location": "Line X | Lines X-Y | Figure X | General",
+      "category": "Validation|Methods|Interpretation|Clarity|Citation|Figure|Formatting",
+      "location": "Line X | Lines X-Y | Figure X | Table X | General",
       "priority": "high|medium|low",
-      "original_text": "Exact text for THIS SPECIFIC point only",
-      "full_context": "Additional context if any",
+      "original_text": "The specific point (one concern/question/suggestion only)",
+      "full_context": "Surrounding context if helpful",
       "requires_new_analysis": true|false,
-      "analysis_type": ["type1", "type2"]
+      "analysis_type": ["phylogenetic", "statistical", "visual", etc.]
     }
   ]
 }
 
-CATEGORIES: Authentication, Methods, Analysis, Interpretation, Terminology, Clarity, Figure, Formatting, Novelty, Citation, Validation, Results, Discussion, Focus, Database, Accuracy
-PRIORITY: high (core claims), medium (important), low (minor)
-TYPE: major (significant revision) or minor (quick fix)
+PRIORITY GUIDE:
+- high: challenges core claims, requires new analysis, blocks acceptance
+- medium: needs clarification or revision but doesn't block
+- low: typos, minor wording, formatting
 
-EXAMPLE - If reviewer says "Line 100 citation wrong. Lines 102-103 unclear. Figure 3 needs scale bar."
-CORRECT: 3 separate comments for Line 100, Lines 102-103, and Figure 3
-WRONG: 1 merged comment about multiple issues
+TYPE GUIDE:
+- major: requires new analysis, significant rewriting, or addresses core validity
+- minor: quick fixes, clarifications, citations
+
+SPLITTING EXAMPLE:
+"Line 100 citation wrong. Also Lines 102-103 are unclear. Figure 3 needs a scale bar and the legend is confusing."
+→ 4 comments: Line 100 citation, Lines 102-103 clarity, Figure 3 scale bar, Figure 3 legend
 
 Number sequentially: ${reviewerId}-1, ${reviewerId}-2, etc.`;
 
@@ -2364,17 +2487,65 @@ Before responding, verify you have:
             const container = document.getElementById('extracted-comments-list');
             const comments = data.comments || [];
 
-            document.getElementById('extracted-count').textContent = `${comments.length} comments found`;
+            // Check if we're in re-extract mode
+            const isReExtract = !!reExtractReviewerId;
+            let existingTexts = new Set();
+            let existingCount = 0;
+
+            if (isReExtract) {
+                const reviewer = reviewData.reviewers.find(r => r.id === reExtractReviewerId);
+                if (reviewer) {
+                    reviewer.comments.forEach(c => {
+                        // Use first 100 chars of text as key for matching
+                        existingTexts.add(c.original_text.toLowerCase().trim().substring(0, 100));
+                    });
+                }
+
+                // Count how many are new vs existing
+                comments.forEach(c => {
+                    const key = c.original_text.toLowerCase().trim().substring(0, 100);
+                    if (existingTexts.has(key)) existingCount++;
+                });
+            }
+
+            const newCount = comments.length - existingCount;
+            document.getElementById('extracted-count').textContent = isReExtract
+                ? `${comments.length} comments (${newCount} new, ${existingCount} existing)`
+                : `${comments.length} comments found`;
 
             if (comments.length === 0) {
                 container.innerHTML = '<div class="text-center text-gray-500 py-4">No comments extracted</div>';
                 return;
             }
 
-            container.innerHTML = comments.map(c => `
-                <div class="bg-white border rounded p-3 text-sm">
+            // Add select all controls for re-extract mode
+            const selectAllHtml = isReExtract ? `
+                <div class="flex items-center justify-between mb-3 p-2 bg-gray-50 rounded">
+                    <div class="flex items-center gap-3">
+                        <label class="flex items-center gap-2 text-sm cursor-pointer">
+                            <input type="checkbox" id="select-all-new" onchange="toggleSelectAllNewComments(this.checked)" checked>
+                            Select all new (${newCount})
+                        </label>
+                    </div>
+                    <span class="text-xs text-gray-500">Existing comments won't be duplicated</span>
+                </div>
+            ` : '';
+
+            container.innerHTML = selectAllHtml + comments.map((c, idx) => {
+                const key = c.original_text.toLowerCase().trim().substring(0, 100);
+                const isExisting = existingTexts.has(key);
+                const checkboxHtml = isReExtract ? `
+                    <input type="checkbox" class="extracted-comment-checkbox"
+                           data-idx="${idx}" ${isExisting ? 'disabled' : 'checked'}
+                           style="margin-right: 8px; ${isExisting ? 'opacity: 0.3;' : ''}">
+                ` : '';
+
+                return `
+                <div class="bg-white border rounded p-3 text-sm ${isExisting ? 'opacity-60' : ''}" data-comment-idx="${idx}">
                     <div class="flex items-center gap-2 mb-2">
+                        ${checkboxHtml}
                         <span class="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">${c.id}</span>
+                        ${isExisting ? '<span class="px-2 py-0.5 rounded text-xs bg-gray-200 text-gray-600">existing</span>' : '<span class="px-2 py-0.5 rounded text-xs bg-green-100 text-green-700">new</span>'}
                         <span class="px-2 py-0.5 rounded text-xs ${c.type === 'major' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}">${c.type}</span>
                         <span class="px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-700">${c.category}</span>
                         <span class="px-2 py-0.5 rounded text-xs ${c.priority === 'high' ? 'bg-red-50 text-red-600' : c.priority === 'medium' ? 'bg-yellow-50 text-yellow-600' : 'bg-green-50 text-green-600'}">${c.priority}</span>
@@ -2382,7 +2553,25 @@ Before responding, verify you have:
                     </div>
                     <p class="text-gray-700 text-xs line-clamp-3">${c.original_text}</p>
                 </div>
-            `).join('');
+            `;
+            }).join('');
+        }
+
+        function toggleSelectAllNewComments(checked) {
+            document.querySelectorAll('.extracted-comment-checkbox:not([disabled])').forEach(cb => {
+                cb.checked = checked;
+            });
+        }
+
+        function getSelectedExtractedComments() {
+            const selected = [];
+            document.querySelectorAll('.extracted-comment-checkbox:checked:not([disabled])').forEach(cb => {
+                const idx = parseInt(cb.dataset.idx);
+                if (extractedCommentsData?.comments?.[idx]) {
+                    selected.push(extractedCommentsData.comments[idx]);
+                }
+            });
+            return selected;
         }
 
         async function generateExpertAnalysisForImported() {
@@ -2395,12 +2584,31 @@ Before responding, verify you have:
             const progressEl = document.getElementById('expert-generation-progress');
             const progressBar = document.getElementById('expert-progress-bar');
             const progressText = document.getElementById('expert-progress-text');
+            const progressPercent = document.getElementById('expert-progress-percent');
+            const expertLog = document.getElementById('expert-log');
 
             importCurrentStep = 3;
             updateImportStepUI();
 
-            progressEl.classList.remove('hidden');
+            if (progressEl) progressEl.classList.remove('hidden');
             document.getElementById('import-processing').classList.remove('hidden');
+
+            // Helper to add log entry
+            const addLog = (msg, type = 'info') => {
+                if (expertLog) {
+                    const colors = { info: '#6b7280', success: '#10b981', error: '#ef4444', processing: '#8b5cf6' };
+                    const entry = document.createElement('div');
+                    entry.style.color = colors[type] || colors.info;
+                    entry.style.marginBottom = '4px';
+                    entry.innerHTML = `<span style="opacity: 0.6">[${new Date().toLocaleTimeString()}]</span> ${msg}`;
+                    expertLog.appendChild(entry);
+                    expertLog.scrollTop = expertLog.scrollHeight;
+                }
+            };
+
+            // Clear previous log
+            if (expertLog) expertLog.innerHTML = '';
+            addLog(`Starting expert analysis for ${comments.length} comments...`, 'info');
 
             // Initialize expert discussions if needed
             if (!expertDiscussions) {
@@ -2408,32 +2616,47 @@ Before responding, verify you have:
             }
 
             let completed = 0;
+            let failed = 0;
             const total = comments.length;
 
             for (const comment of comments) {
-                progressBar.style.width = `${(completed / total) * 100}%`;
-                progressText.textContent = `Processing ${comment.id} (${completed + 1}/${total})...`;
+                const percent = Math.round((completed / total) * 100);
+                if (progressBar) progressBar.style.width = `${percent}%`;
+                if (progressPercent) progressPercent.textContent = `${percent}%`;
+                if (progressText) progressText.textContent = `Processing ${comment.id} (${completed + 1}/${total})...`;
                 document.getElementById('import-processing-status').textContent = `Analyzing ${comment.id} with expert panel...`;
+
+                addLog(`<i class="fas fa-spinner fa-spin"></i> Analyzing <b>${comment.id}</b>: "${comment.original_text?.substring(0, 50)}..."`, 'processing');
 
                 try {
                     await regenerateExpertForCommentSilent(comment);
                     completed++;
+                    addLog(`<i class="fas fa-check"></i> <b>${comment.id}</b> - Expert analysis complete`, 'success');
                 } catch (e) {
+                    failed++;
                     console.error(`Failed to generate expert analysis for ${comment.id}:`, e);
+                    addLog(`<i class="fas fa-times"></i> <b>${comment.id}</b> - Failed: ${e.message}`, 'error');
                 }
 
                 // Small delay between requests
                 await new Promise(r => setTimeout(r, 500));
             }
 
-            progressBar.style.width = '100%';
-            progressText.textContent = `Complete! ${completed}/${total} analyzed`;
+            if (progressBar) progressBar.style.width = '100%';
+            if (progressPercent) progressPercent.textContent = '100%';
+            if (progressText) progressText.textContent = `Complete! ${completed}/${total} analyzed`;
             document.getElementById('import-processing').classList.add('hidden');
 
+            addLog(`<b>Finished!</b> ${completed} successful, ${failed} failed`, completed === total ? 'success' : 'info');
             showNotification(`Generated expert analysis for ${completed} comments`, 'success');
         }
 
         async function finalizeImport() {
+            // Check if we're in re-extract mode
+            if (reExtractReviewerId) {
+                return finalizeReExtract();
+            }
+
             if (!extractedCommentsData || !extractedCommentsData.comments?.length) {
                 showNotification('No data to import', 'error');
                 return;
@@ -2480,6 +2703,173 @@ Before responding, verify you have:
 
             closeImportReviewsModal();
             showNotification(`Imported ${reviewer.comments.length} comments from ${reviewer.name}`, 'success');
+        }
+
+        async function openReExtractModal(reviewerId) {
+            const reviewer = reviewData.reviewers.find(r => r.id === reviewerId);
+            if (!reviewer) {
+                showNotification('Reviewer not found', 'error');
+                return;
+            }
+
+            reExtractReviewerId = reviewerId;
+
+            // Open import modal and pre-populate with existing data
+            openImportReviewsModal();
+
+            // Set the reviewer info
+            document.getElementById('reviewer-id-input').value = reviewer.id;
+            document.getElementById('reviewer-name-input').value = reviewer.name;
+
+            const rawInput = document.getElementById('raw-reviews-input');
+
+            // Try to load review documents from the server first
+            if (currentPaperId) {
+                try {
+                    rawInput.value = 'Loading review documents...';
+                    rawInput.disabled = true;
+
+                    // Get list of review files
+                    const filesRes = await fetch(`${API_BASE}/papers/${currentPaperId}/review-files`);
+                    const filesData = await filesRes.json();
+
+                    if (filesData.files && filesData.files.length > 0) {
+                        // Read all review file contents
+                        let combinedContent = '';
+                        for (const file of filesData.files) {
+                            try {
+                                const contentRes = await fetch(`${API_BASE}/read-file`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ path: file.path })
+                                });
+                                const contentData = await contentRes.json();
+                                if (contentData.content) {
+                                    combinedContent += `\n\n=== ${file.name} ===\n\n${contentData.content}`;
+                                }
+                            } catch (e) {
+                                console.warn(`Could not read ${file.name}:`, e);
+                            }
+                        }
+
+                        if (combinedContent.trim()) {
+                            rawInput.value = combinedContent.trim();
+                            rawInput.disabled = false;
+                            showNotification(`Loaded ${filesData.files.length} review document(s)`, 'success');
+                        } else {
+                            throw new Error('No content loaded');
+                        }
+                    } else {
+                        throw new Error('No review files found');
+                    }
+                } catch (e) {
+                    console.log('Could not load review documents from server:', e.message);
+                    rawInput.disabled = false;
+                    // Fall back to original_document or existing comments
+                    if (reviewer.original_document) {
+                        rawInput.value = reviewer.original_document;
+                    } else {
+                        // Combine existing comments as fallback
+                        rawInput.value = reviewer.comments.map(c =>
+                            `[${c.id}] ${c.type.toUpperCase()} - ${c.category}\n${c.original_text}`
+                        ).join('\n\n---\n\n');
+                    }
+                }
+            } else {
+                // No paper ID - fall back to original_document or existing comments
+                if (reviewer.original_document) {
+                    rawInput.value = reviewer.original_document;
+                } else {
+                    rawInput.value = reviewer.comments.map(c =>
+                        `[${c.id}] ${c.type.toUpperCase()} - ${c.category}\n${c.original_text}`
+                    ).join('\n\n---\n\n');
+                }
+            }
+
+            // Update modal title to indicate re-extraction
+            const modalTitle = document.querySelector('#import-reviews-modal .modal-title');
+            if (modalTitle) {
+                modalTitle.innerHTML = `<i class="fas fa-sync-alt"></i> Re-extract comments for ${reviewer.name}`;
+            }
+
+            // Update the next button text
+            const nextBtn = document.getElementById('import-next-btn');
+            if (nextBtn) {
+                nextBtn.innerHTML = '<i class="fas fa-magic"></i> Re-extract comments';
+            }
+        }
+
+        async function finalizeReExtract() {
+            const reviewerId = reExtractReviewerId;
+            const existingReviewer = reviewData.reviewers.find(r => r.id === reviewerId);
+
+            if (!existingReviewer) {
+                showNotification('Original reviewer not found', 'error');
+                return;
+            }
+
+            // Get only the selected new comments
+            const selectedComments = getSelectedExtractedComments();
+
+            if (selectedComments.length === 0) {
+                showNotification('No new comments selected to import', 'warning');
+                return;
+            }
+
+            // Find the highest existing comment number for this reviewer
+            let maxCommentNum = 0;
+            existingReviewer.comments.forEach(c => {
+                const match = c.id.match(/-(\d+)$/);
+                if (match) {
+                    maxCommentNum = Math.max(maxCommentNum, parseInt(match[1]));
+                }
+            });
+
+            // Add selected new comments with sequential IDs
+            const newComments = selectedComments.map((c, idx) => ({
+                ...c,
+                id: `${reviewerId}-${maxCommentNum + idx + 1}`,
+                status: 'pending',
+                draft_response: '',
+                actions_taken: [],
+                tags: [],
+                is_favorite: false
+            }));
+
+            // Additive: append new comments to existing ones
+            existingReviewer.comments = [...existingReviewer.comments, ...newComments];
+
+            // Update reviewer metadata if provided
+            if (extractedCommentsData?.reviewer?.expertise) {
+                existingReviewer.expertise = extractedCommentsData.reviewer.expertise;
+            }
+            if (extractedCommentsData?.reviewer?.overall_assessment) {
+                existingReviewer.overall_assessment = extractedCommentsData.reviewer.overall_assessment;
+            }
+
+            // Save original document for future re-extractions
+            const rawInput = document.getElementById('raw-reviews-input');
+            if (rawInput.value) {
+                existingReviewer.original_document = rawInput.value;
+            }
+
+            // Save to database
+            await saveProgress();
+            await saveExpertDiscussions();
+
+            // Reset state
+            reExtractReviewerId = null;
+
+            // Update UI
+            updateSidebar();
+            setView('byreviewer');
+
+            closeImportReviewsModal();
+
+            showNotification(
+                `Added ${newComments.length} new comment${newComments.length !== 1 ? 's' : ''} to ${existingReviewer.name}`,
+                'success'
+            );
         }
 
         // Refresh context files from server
@@ -4110,6 +4500,9 @@ Use the "Generate expert analysis" button to create insights using OpenCode.
 
             // Update top tags widget
             updateTopTagsWidget();
+
+            // Update favorites count
+            updateFavoritesCount();
         }
 
         function getAllComments() {
@@ -4679,6 +5072,8 @@ Use the "Generate expert analysis" button to create insights using OpenCode.
                     comments = comments.filter(c => c.requires_new_analysis === currentFilter.value);
                 } else if (currentFilter.type === 'status') {
                     comments = comments.filter(c => c.status === currentFilter.value);
+                } else if (currentFilter.type === 'favorites') {
+                    comments = comments.filter(c => c.is_favorite);
                 } else if (currentFilter.type === 'tag') {
                     comments = comments.filter(c => (c.tags || []).includes(currentFilter.value));
                 } else if (currentFilter.type === 'tagsearch') {
@@ -4806,6 +5201,8 @@ Use the "Generate expert analysis" button to create insights using OpenCode.
                             <span class="comments-filter-badge">
                                 ${currentFilter.type === 'search'
                                     ? `<i class="fas fa-search"></i> "${currentFilter.value}"`
+                                    : currentFilter.type === 'favorites'
+                                    ? `<i class="fas fa-heart"></i> Favorites`
                                     : currentFilter.type === 'tag'
                                     ? `<i class="fas fa-tag"></i> ${currentFilter.value}`
                                     : currentFilter.type === 'tagsearch'
@@ -5099,6 +5496,12 @@ Use the "Generate expert analysis" button to create insights using OpenCode.
                     <!-- Quick Actions -->
                     <div class="comment-card-footer">
                         <div class="comment-quick-actions">
+                            <button onclick="toggleFavorite('${comment.reviewerId}', '${comment.id}', event)"
+                                    class="btn btn-sm ${comment.is_favorite ? 'btn-favorite-active' : 'btn-ghost'}"
+                                    data-favorite-btn="${comment.id}"
+                                    title="${comment.is_favorite ? 'Remove from favorites' : 'Add to favorites'}">
+                                <i class="${comment.is_favorite ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
+                            </button>
                             <button onclick="setCommentStatus('${comment.reviewerId}', '${comment.id}', 'completed')"
                                     class="btn btn-sm ${comment.status === 'completed' ? 'btn-success' : 'btn-ghost'}"
                                     title="Mark completed">
@@ -5183,6 +5586,10 @@ Use the "Generate expert analysis" button to create insights using OpenCode.
                                         <div class="reviewer-progress-mini">
                                             <div class="reviewer-progress-mini-bar" style="width: ${progressPct}%"></div>
                                         </div>
+                                        <button onclick="event.stopPropagation(); openReExtractModal('${reviewer.id}')"
+                                                class="btn btn-sm btn-ghost" title="Re-extract comments to refine">
+                                            <i class="fas fa-sync-alt"></i> Re-extract
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -5926,7 +6333,7 @@ Use the "Generate expert analysis" button to create insights using OpenCode.
                     </h4>
                     <div class="quick-nav-links">
                         ${filteredIds.map(id => {
-                            const d = expertDiscussions.expert_discussions[id];
+                            const d = expertDiscussions.expert_discussions[getExpertKey(id)];
                             const majorClass = d?.type === 'major' ? 'major' : '';
                             return `<a href="#expert-${id}" class="quick-nav-link ${majorClass}">${id}</a>`;
                         }).join('')}
@@ -6143,8 +6550,9 @@ GUIDELINES:
                             // Update the expert discussions
                             if (!expertDiscussions) expertDiscussions = { expert_discussions: {} };
 
-                            expertDiscussions.expert_discussions[commentId] = {
-                                ...expertDiscussions.expert_discussions[commentId],
+                            const expertKey = getExpertKey(commentId);
+                            expertDiscussions.expert_discussions[expertKey] = {
+                                ...expertDiscussions.expert_discussions[expertKey],
                                 reviewer_comment: comment.original_text,
                                 full_context: comment.full_context || '',
                                 priority: comment.priority,
@@ -6338,7 +6746,8 @@ Return ONLY a valid JSON object (no markdown, no explanation):
 
             if (!expertDiscussions) expertDiscussions = { expert_discussions: {} };
 
-            expertDiscussions.expert_discussions[comment.id] = {
+            const expertKey = getExpertKey(comment.id);
+            expertDiscussions.expert_discussions[expertKey] = {
                 reviewer_comment: comment.original_text,
                 full_context: comment.full_context || '',
                 priority: comment.priority,
@@ -6591,7 +7000,7 @@ Return ONLY a valid JSON object (no markdown, no explanation):
             let applied = 0;
             for (const reviewer of reviewData.reviewers) {
                 for (const comment of reviewer.comments) {
-                    const disc = expertDiscussions.expert_discussions[comment.id];
+                    const disc = expertDiscussions.expert_discussions[getExpertKey(comment.id)];
                     if (disc && disc.recommended_response) {
                         comment.draft_response = disc.recommended_response;
                         if (comment.status === 'pending') comment.status = 'in_progress';
@@ -7791,6 +8200,50 @@ IMPORTANT: Include ALL ${taskSummaries.length} task IDs in your JSON output. Sta
         function filterByTag(tag) {
             currentFilter = { type: 'tag', value: tag };
             setView('comments', true);  // preserve filter
+        }
+
+        function filterByFavorites() {
+            currentFilter = { type: 'favorites', value: true };
+            setView('comments', true);  // preserve filter
+        }
+
+        function toggleFavorite(reviewerId, commentId, event) {
+            if (event) event.stopPropagation();
+
+            const reviewer = reviewData.reviewers.find(r => r.id === reviewerId);
+            const comment = reviewer?.comments.find(c => c.id === commentId);
+            if (!comment) return;
+
+            comment.is_favorite = !comment.is_favorite;
+
+            // Update the button immediately
+            const btn = document.querySelector(`[data-favorite-btn="${commentId}"]`);
+            if (btn) {
+                const icon = btn.querySelector('i');
+                if (comment.is_favorite) {
+                    btn.classList.remove('btn-ghost');
+                    btn.classList.add('btn-favorite-active');
+                    icon.classList.remove('fa-regular');
+                    icon.classList.add('fa-solid');
+                } else {
+                    btn.classList.add('btn-ghost');
+                    btn.classList.remove('btn-favorite-active');
+                    icon.classList.add('fa-regular');
+                    icon.classList.remove('fa-solid');
+                }
+            }
+
+            updateFavoritesCount();
+            scheduleAutoSave();
+        }
+
+        function updateFavoritesCount() {
+            const count = getAllComments().filter(c => c.is_favorite).length;
+            const badge = document.getElementById('favorites-count');
+            if (badge) {
+                badge.textContent = count;
+                badge.style.display = count > 0 ? 'inline' : 'none';
+            }
         }
 
         function clearFilter() {
