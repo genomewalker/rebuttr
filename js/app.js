@@ -5570,14 +5570,15 @@ Use the "Generate expert analysis" button to create insights using OpenCode.
         let expandedReviewers = {};
 
         // Render By Reviewer - Unified format with expert panels
-        // Track collapsed reviewers (collapsed by default = false, meaning expanded)
+        // Track collapsed reviewers (collapsed by default = true)
         let collapsedReviewers = {};
 
         function renderByReviewer() {
             const html = `
                 <div class="reviewer-panels">
                     ${reviewData.reviewers.map(reviewer => {
-                        const isCollapsed = collapsedReviewers[reviewer.id];
+                        // Default to collapsed (true) unless explicitly set to false
+                        const isCollapsed = collapsedReviewers[reviewer.id] !== false;
                         const isExpanded = expandedReviewers[reviewer.id];
                         const commentsToShow = isExpanded ? reviewer.comments : reviewer.comments.slice(0, 3);
                         const majorCount = reviewer.comments.filter(c => c.type === 'major').length;
