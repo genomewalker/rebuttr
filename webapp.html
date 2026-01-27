@@ -304,65 +304,70 @@
 
     <!-- Import Reviews Modal -->
     <div id="import-reviews-modal" class="modal-overlay hidden">
-        <div class="modal" style="max-width: 800px;">
-            <div class="modal-header" style="background: var(--purple); color: white;">
-                <h3 class="modal-title" style="color: white;"><i class="fas fa-file-import"></i> Import & parse reviews with AI</h3>
-                <button onclick="closeImportReviewsModal()" class="btn-icon" style="color: white;"><i class="fas fa-times"></i></button>
+        <div class="modal import-modal">
+            <div class="modal-header import-modal-header">
+                <h3 class="modal-title"><i class="fas fa-sync-alt"></i> Re-extract comments for Referee #3 (Remarks to the Author)</h3>
+                <button onclick="closeImportReviewsModal()" class="btn-icon"><i class="fas fa-times"></i></button>
             </div>
             <div class="modal-body">
                 <div id="import-step-content-1">
                     <div class="form-group">
-                        <label class="form-label">Paste raw reviewer comments</label>
-                        <textarea id="raw-reviews-input" class="form-textarea" rows="10" placeholder="Paste the complete reviewer comments here..."></textarea>
+                        <label class="form-label form-label-caps">Paste raw reviewer comments</label>
+                        <textarea id="raw-reviews-input" class="form-textarea import-textarea" rows="8" placeholder="Paste the complete reviewer comments here..."></textarea>
                     </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="form-group"><label class="form-label">Reviewer ID</label><input type="text" id="reviewer-id-input" class="form-input" value="R1" placeholder="R1, R2, etc."></div>
-                        <div class="form-group"><label class="form-label">Reviewer name</label><input type="text" id="reviewer-name-input" class="form-input" value="Referee #1" placeholder="Referee #1"></div>
+                    <div class="import-reviewer-fields">
+                        <div class="form-group">
+                            <label class="form-label form-label-caps">Reviewer ID</label>
+                            <input type="text" id="reviewer-id-input" class="form-input" value="referee-3" placeholder="referee-1, referee-2, etc.">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label form-label-caps">Reviewer name</label>
+                            <input type="text" id="reviewer-name-input" class="form-input import-reviewer-name" value="Referee #3 (Remarks to the Author)" placeholder="Referee #1 (Remarks to the Author)">
+                        </div>
                     </div>
                 </div>
                 <div id="import-step-content-2" class="hidden">
-                    <div class="flex items-center justify-between mb-3">
-                        <h4 style="font-weight: 500;">Extracted comments</h4>
-                        <span id="extracted-count" class="text-muted" style="font-size: 13px;">0 comments found</span>
+                    <div class="import-results-header">
+                        <h4 class="import-results-title">Extracted comments</h4>
+                        <span id="extracted-count" class="import-results-count">0 comments (0 new, 0 existing)</span>
                     </div>
-                    <div id="extracted-comments-list" class="card" style="max-height: 300px; overflow-y: auto;"></div>
+                    <p class="import-results-hint">Existing comments won't be duplicated</p>
+                    <div id="extracted-comments-list" class="import-comments-list"></div>
                 </div>
-                <div id="import-step-content-3" class="hidden" style="text-align: center; padding: 32px;">
-                    <i class="fas fa-brain" style="font-size: 48px; color: #d8b4fe; margin-bottom: 16px;"></i>
-                    <h4 style="font-weight: 500; margin-bottom: 8px;">Generate expert analysis</h4>
-                    <p class="text-muted">AI will analyze each comment and generate recommended responses.</p>
+                <div id="import-step-content-3" class="hidden import-expert-step">
+                    <div class="import-expert-icon"><i class="fas fa-brain"></i></div>
+                    <h4 class="import-expert-title">Generate expert analysis</h4>
+                    <p class="import-expert-desc">AI will analyze each comment and generate recommended responses.</p>
 
                     <!-- Expert Analysis Progress -->
-                    <div id="expert-generation-progress" class="hidden" style="margin-top: 24px; text-align: left;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                            <span id="expert-progress-text" style="font-size: 13px; font-weight: 500;">Starting...</span>
-                            <span id="expert-progress-percent" style="font-size: 13px; color: var(--purple);">0%</span>
+                    <div id="expert-generation-progress" class="hidden import-progress-container">
+                        <div class="import-progress-header">
+                            <span id="expert-progress-text" class="import-progress-text">Starting...</span>
+                            <span id="expert-progress-percent" class="import-progress-percent">0%</span>
                         </div>
-                        <div style="width: 100%; height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden;">
-                            <div id="expert-progress-bar" style="width: 0%; height: 100%; background: var(--purple); transition: width 0.3s ease;"></div>
+                        <div class="import-progress-track">
+                            <div id="expert-progress-bar" class="import-progress-bar"></div>
                         </div>
-                        <div id="expert-log" style="margin-top: 16px; max-height: 150px; overflow-y: auto; background: #f9fafb; border-radius: 8px; padding: 12px; font-family: monospace; font-size: 12px; text-align: left;">
+                        <div id="expert-log" class="import-log">
                             <div class="text-muted">Waiting to start...</div>
                         </div>
                     </div>
                 </div>
-                <div id="import-processing" class="hidden mt-4">
-                    <div class="card" style="background: var(--purple-light); border-color: var(--purple);">
-                        <div class="flex items-center gap-3 p-3">
-                            <i class="fas fa-spinner fa-spin" style="color: var(--purple);"></i>
-                            <div>
-                                <div style="font-weight: 500; color: var(--purple);">Processing with AI...</div>
-                                <div id="import-processing-status" class="text-muted" style="font-size: 13px;">Extracting comments...</div>
-                            </div>
+                <div id="import-processing" class="hidden import-processing-card">
+                    <div class="import-processing-content">
+                        <i class="fas fa-spinner fa-spin import-processing-icon"></i>
+                        <div>
+                            <div class="import-processing-title">Processing with AI...</div>
+                            <div id="import-processing-status" class="import-processing-status">Extracting and categorizing comments with AI...</div>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button onclick="prevImportStep()" id="import-prev-btn" class="btn btn-secondary btn-sm hidden"><i class="fas fa-arrow-left"></i> Back</button>
-                <div class="flex gap-2" style="margin-left: auto;">
-                    <button onclick="closeImportReviewsModal()" class="btn btn-secondary btn-sm">Cancel</button>
-                    <button onclick="nextImportStep()" id="import-next-btn" class="btn btn-sm" style="background: var(--purple); color: white;"><i class="fas fa-magic"></i> Extract comments</button>
+                <button onclick="prevImportStep()" id="import-prev-btn" class="btn btn-secondary hidden"><i class="fas fa-arrow-left"></i> Back</button>
+                <div class="import-footer-actions">
+                    <button onclick="closeImportReviewsModal()" class="btn btn-secondary">Cancel</button>
+                    <button onclick="nextImportStep()" id="import-next-btn" class="btn btn-primary"><i class="fas fa-magic"></i> Re-extract comments</button>
                 </div>
             </div>
         </div>
@@ -716,6 +721,6 @@
         </div>
     </div>
 
-    <script src="js/app.js?v=11"></script>
+    <script src="js/app.js?v=13"></script>
 </body>
 </html>

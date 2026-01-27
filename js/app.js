@@ -1277,14 +1277,67 @@ Ask me anything about this comment, or request a draft response.`;
             }
         }
 
+        // Extract only the specific reviewer's section from raw text
+        function extractReviewerSection(rawText, reviewerNumber) {
+            if (!reviewerNumber) return rawText;
+
+            const num = parseInt(reviewerNumber);
+
+            // Pattern to match the start of this reviewer's section
+            const startPattern = new RegExp(
+                `Referee\\s*#${num}\\s*\\(Remarks\\s+to\\s+the\\s+Author\\):?`,
+                'i'
+            );
+
+            // Pattern to match the end (next reviewer or code availability section)
+            const endPatterns = [
+                new RegExp(`Referee\\s*#${num}\\s*\\(Remarks\\s+on\\s+code`, 'i'),
+                new RegExp(`Referee\\s*#${num + 1}\\s*\\(Remarks`, 'i'),
+                new RegExp(`Referee\\s*#${num + 1}\\b`, 'i')
+            ];
+
+            const startMatch = rawText.match(startPattern);
+            if (!startMatch) {
+                console.log(`Could not find start of Referee #${num} section`);
+                return rawText; // Return full text if section not found
+            }
+
+            const startIdx = startMatch.index;
+            let endIdx = rawText.length;
+
+            // Find the earliest end marker
+            for (const pattern of endPatterns) {
+                const match = rawText.substring(startIdx + startMatch[0].length).match(pattern);
+                if (match) {
+                    const possibleEnd = startIdx + startMatch[0].length + match.index;
+                    if (possibleEnd < endIdx) {
+                        endIdx = possibleEnd;
+                    }
+                }
+            }
+
+            const section = rawText.substring(startIdx, endIdx).trim();
+            console.log(`Extracted Referee #${num} section: ${section.length} chars (from ${rawText.length} total)`);
+            return section;
+        }
+
         async function extractReviewComments() {
-            const rawText = document.getElementById('raw-reviews-input').value.trim();
+            let rawText = document.getElementById('raw-reviews-input').value.trim();
             const reviewerId = document.getElementById('reviewer-id-input').value.trim() || 'R1';
             const reviewerName = document.getElementById('reviewer-name-input').value.trim() || 'Referee #1';
 
             if (!rawText) {
                 showNotification('Please paste reviewer comments first', 'error');
                 return;
+            }
+
+            // In re-extract mode, pre-extract only the relevant reviewer section
+            if (reExtractReviewerId) {
+                const reviewerNumber = reviewerName.match(/#(\d+)/)?.[1];
+                if (reviewerNumber) {
+                    rawText = extractReviewerSection(rawText, reviewerNumber);
+                    console.log(`Re-extract mode: Using only Referee #${reviewerNumber} section`);
+                }
             }
 
             // Show processing
@@ -2533,44 +2586,44 @@ Before responding, verify you have:
                 : `${comments.length} comments found`;
 
             if (comments.length === 0) {
-                container.innerHTML = '<div class="text-center text-gray-500 py-4">No comments extracted</div>';
+                container.innerHTML = '<div class="import-comment-item" style="justify-content: center; color: var(--ink-muted);">No comments extracted</div>';
                 return;
             }
 
             // Add select all controls for re-extract mode
             const selectAllHtml = isReExtract ? `
-                <div class="flex items-center justify-between mb-3 p-2 bg-gray-50 rounded">
-                    <div class="flex items-center gap-3">
-                        <label class="flex items-center gap-2 text-sm cursor-pointer">
-                            <input type="checkbox" id="select-all-new" onchange="toggleSelectAllNewComments(this.checked)" checked>
-                            Select all new (${newCount})
-                        </label>
-                    </div>
-                    <span class="text-xs text-gray-500">Existing comments won't be duplicated</span>
+                <div class="import-select-all">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" id="select-all-new" class="import-comment-checkbox" onchange="toggleSelectAllNewComments(this.checked)" checked>
+                        Select all new (${newCount})
+                    </label>
                 </div>
             ` : '';
 
             container.innerHTML = selectAllHtml + comments.map((c, idx) => {
                 const key = c.original_text.toLowerCase().trim().substring(0, 100);
                 const isExisting = existingTexts.has(key);
-                const checkboxHtml = isReExtract ? `
-                    <input type="checkbox" class="extracted-comment-checkbox"
-                           data-idx="${idx}" ${isExisting ? 'disabled' : 'checked'}
-                           style="margin-right: 8px; ${isExisting ? 'opacity: 0.3;' : ''}">
-                ` : '';
 
                 return `
-                <div class="bg-white border rounded p-3 text-sm ${isExisting ? 'opacity-60' : ''}" data-comment-idx="${idx}">
-                    <div class="flex items-center gap-2 mb-2">
-                        ${checkboxHtml}
-                        <span class="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">${c.id}</span>
-                        ${isExisting ? '<span class="px-2 py-0.5 rounded text-xs bg-gray-200 text-gray-600">existing</span>' : '<span class="px-2 py-0.5 rounded text-xs bg-green-100 text-green-700">new</span>'}
-                        <span class="px-2 py-0.5 rounded text-xs ${c.type === 'major' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}">${c.type}</span>
-                        <span class="px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-700">${c.category}</span>
-                        <span class="px-2 py-0.5 rounded text-xs ${c.priority === 'high' ? 'bg-red-50 text-red-600' : c.priority === 'medium' ? 'bg-yellow-50 text-yellow-600' : 'bg-green-50 text-green-600'}">${c.priority}</span>
-                        ${c.location && c.location !== 'General' ? `<span class="text-xs text-gray-400">${c.location}</span>` : ''}
+                <div class="import-comment-item ${isExisting ? 'opacity-60' : ''}" data-comment-idx="${idx}">
+                    ${isReExtract ? `
+                        <input type="checkbox" class="import-comment-checkbox extracted-comment-checkbox"
+                               data-idx="${idx}" ${isExisting ? 'disabled' : 'checked'}
+                               ${isExisting ? 'style="opacity: 0.3;"' : ''}>
+                    ` : ''}
+                    <div class="import-comment-content">
+                        <div class="import-comment-header">
+                            <span class="import-comment-id">${c.id}</span>
+                            ${isExisting
+                                ? '<span class="import-comment-badge" style="background: var(--paper-warm); color: var(--ink-faint);">existing</span>'
+                                : '<span class="import-comment-badge new">new</span>'}
+                            <span class="import-comment-badge ${c.type === 'major' ? 'major' : 'minor'}">${c.type}</span>
+                            <span class="import-comment-badge category">${c.category}</span>
+                            <span class="import-comment-badge priority-${c.priority}">${c.priority}</span>
+                            ${c.location && c.location !== 'General' ? `<span class="import-comment-meta">${c.location}</span>` : ''}
+                        </div>
+                        <p class="import-comment-text">${c.original_text}</p>
                     </div>
-                    <p class="text-gray-700 text-xs line-clamp-3">${c.original_text}</p>
                 </div>
             `;
             }).join('');
